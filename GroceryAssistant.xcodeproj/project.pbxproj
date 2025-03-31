@@ -12,6 +12,8 @@
 		AFC10FE32D9A735400E217F2 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */ = {isa = PBXBuildFile; productRef = AFC10FE22D9A735400E217F2 /* FirebaseAnalyticsWithoutAdIdSupport */; };
 		AFC10FE52D9A735400E217F2 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = AFC10FE42D9A735400E217F2 /* FirebaseAppCheck */; };
 		AFC10FE72D9A735400E217F2 /* FirebaseAppDistribution-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = AFC10FE62D9A735400E217F2 /* FirebaseAppDistribution-Beta */; };
+		AFC110252D9A80AE00E217F2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = AFC110242D9A80AE00E217F2 /* FirebaseAuth */; };
+		AFC110272D9A80B900E217F2 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = AFC110262D9A80B900E217F2 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,10 +63,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				AFC10FE52D9A735400E217F2 /* FirebaseAppCheck in Frameworks */,
+				AFC110252D9A80AE00E217F2 /* FirebaseAuth in Frameworks */,
 				AFC10FDF2D9A735400E217F2 /* FirebaseAnalytics in Frameworks */,
 				AFC10FE72D9A735400E217F2 /* FirebaseAppDistribution-Beta in Frameworks */,
 				AFC10FE32D9A735400E217F2 /* FirebaseAnalyticsWithoutAdIdSupport in Frameworks */,
 				AFC10FE12D9A735400E217F2 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */,
+				AFC110272D9A80B900E217F2 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,6 +95,7 @@
 				AFC10F892D99715900E217F2 /* GroceryAssistant */,
 				AFC10F9A2D99715C00E217F2 /* GroceryAssistantTests */,
 				AFC10FA42D99715C00E217F2 /* GroceryAssistantUITests */,
+				AFC110232D9A80AE00E217F2 /* Frameworks */,
 				AFC10F882D99715900E217F2 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -103,6 +108,13 @@
 				AFC10FA12D99715C00E217F2 /* GroceryAssistantUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AFC110232D9A80AE00E217F2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -130,6 +142,8 @@
 				AFC10FE22D9A735400E217F2 /* FirebaseAnalyticsWithoutAdIdSupport */,
 				AFC10FE42D9A735400E217F2 /* FirebaseAppCheck */,
 				AFC10FE62D9A735400E217F2 /* FirebaseAppDistribution-Beta */,
+				AFC110242D9A80AE00E217F2 /* FirebaseAuth */,
+				AFC110262D9A80B900E217F2 /* FirebaseFirestore */,
 			);
 			productName = GroceryAssistant;
 			productReference = AFC10F872D99715900E217F2 /* GroceryAssistant.app */;
@@ -420,6 +434,7 @@
 				DEVELOPMENT_TEAM = SRPACPFAKQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to allow you to securely sign in to your account.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -449,6 +464,7 @@
 				DEVELOPMENT_TEAM = SRPACPFAKQ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "We use Face ID to allow you to securely sign in to your account.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -616,6 +632,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AFC10FDD2D9A735400E217F2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = "FirebaseAppDistribution-Beta";
+		};
+		AFC110242D9A80AE00E217F2 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AFC10FDD2D9A735400E217F2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		AFC110262D9A80B900E217F2 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AFC10FDD2D9A735400E217F2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

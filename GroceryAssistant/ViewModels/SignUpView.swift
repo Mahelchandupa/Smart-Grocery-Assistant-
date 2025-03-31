@@ -7,6 +7,7 @@ import LocalAuthentication
 
 struct SignUpView: View {
     @Binding var navPath: NavigationPath
+    @EnvironmentObject var authManager: AuthManager
     
     @State private var firstName: String = ""
     @State private var lastName: String = ""
@@ -15,6 +16,7 @@ struct SignUpView: View {
     @State private var phoneNumber: String = ""
     @State private var enableBiometrics: Bool = false
     @State private var showPassword: Bool = false
+    @State private var isLoading: Bool = false
     
     @State private var firstNameError: String? = nil
     @State private var lastNameError: String? = nil
@@ -264,16 +266,32 @@ struct SignUpView: View {
                         
                         // Sign Up Button
                         Button(action: handleSignUp) {
-                            Text("Sign Up")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.green)
-                                .cornerRadius(8)
+                            if isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(1.0)
+                            } else {
+                                Text("Sign Up")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                
+                            }
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(8)
                         .padding(.top, 8)
+                        .disabled(isLoading)
+                        
+                        // Error message form Firebase
+                        if let errorMsg = authManager.authError {
+                            Text(errorMsg)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.top, 8)
+                        }
                         
                         // Already Have Account
                         HStack {
@@ -281,12 +299,13 @@ struct SignUpView: View {
                                 .foregroundColor(.gray)
                             
                             Button(action: {
-                                // Navigate to sign in
-                            }) {
-                                Text("Sign In")
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.green)
-                            }
+                                navPath.removeLast()}) {
+                                    
+                                    Text("Sign In")
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.green)
+                                }
+                                .disabled(isLoading)
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.bottom, 32)
@@ -372,7 +391,7 @@ struct SignUpView: View {
             isValid = false
         }
         
-         if isValid {
+        if isValid {
             isLoading = true
             
             // Prepare the sign-up request
@@ -403,11 +422,6 @@ struct SignUpView: View {
                     }
                 }
             }
-    }
-}
-
-struct SignUpView_Previews: PreviewProvider {
-    static var previews: some View {
-        SignUpView()
+        }
     }
 }

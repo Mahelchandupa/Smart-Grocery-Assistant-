@@ -69,20 +69,23 @@ struct ContentView: View {
                 switch route {
                 case .profile:
                     ProfileView(navPath: $navPath)
-                case .signIn:
-                    // Should not navigate to sign in when already authenticated
-                    // This is included for completeness
-                    EmptyView()
-                case .signUp:
-                    // Should not navigate to sign up when already authenticated
-                    // This is included for completeness
-                    EmptyView()
-                case .userProfile:
-                    UserProfileView(navPath: $navPath)
+                case .signIn, .signUp:
+                    EmptyView() // Should not navigate to sign in/up when authenticated
                 case .home:
-                    EmptyView() 
+                    HomeView(navPath: $navPath)
+                case .nutritionalInfo:
+                    NutritionalInfoView(navPath: $navPath)
+                case .locator:
+                    LocatorView(navPath: $navPath)
+                case .lists:
+                    ListsView(navPath: $navPath)
+                case .reminder:
+                    ReminderView(navPath: $navPath)
+                case .history:
+                    HistoryView(navPath: $navPath)
                 }
             }
+
         }
     }
 }
@@ -101,7 +104,7 @@ struct CustomTabBar: View {
                         ZStack {
                             if index == 2 { // Home button
                                 Circle()
-                                    .stroke(Color(AppColors(green600)), lineWidth: 2)
+                                    .stroke(Color(AppColors.green600), lineWidth: 2)
                                     .frame(width: 50, height: 50)
                             }
                             
@@ -109,13 +112,13 @@ struct CustomTabBar: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 25, height: 25)
-                                .foregroundColor(selectedTab == index ? Color(AppColors(green600)) : Color(AppColors(green500)))
+                                .foregroundColor(selectedTab == index ? Color(AppColors.green600) : Color(AppColors.green500))
                         }
                         
                         if index != 2 { // Not home button
                             Text(getTabName(for: index))
                                 .font(.system(size: 10))
-                                .foregroundColor(selectedTab == index ? Color(AppColors(green600)) : Color(AppColors(green500)))
+                                .foregroundColor(selectedTab == index ? Color(AppColors.green600) : Color(AppColors.green500))
                         }
                     }
                 }
@@ -124,7 +127,7 @@ struct CustomTabBar: View {
         }
         .frame(height: 70)
         .background(
-            Color(AppColors(background))
+            Color(AppColors.background)
                 .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: -4)
                 .clipShape(CustomShape())
         )
@@ -164,6 +167,9 @@ struct CustomShape: Shape {
     }
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .environmentObject(AuthManager())
+    }
 }
