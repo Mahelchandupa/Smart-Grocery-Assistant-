@@ -1,9 +1,6 @@
 //
 //  SignInView.swift
 //  GroceryAssistant
-//
-//  Created by sasiri rukshan nanayakkara on 3/30/25.
-//
 
 import SwiftUI
 import LocalAuthentication
@@ -18,7 +15,7 @@ struct SignInView: View {
     @State private var biometricType: BiometricType = .none
     @State private var biometricsEnabled: Bool = false
     @State private var biometricsAvailable: Bool = false
-    @Environment(\.presentationMode) var presentationMode
+    @Binding var navPath: NavigationPath
     
     var body: some View {
         VStack(spacing: 0) {
@@ -213,8 +210,9 @@ struct SignInView: View {
                             .foregroundColor(.gray)
                         
                         Button(action: {
-                            // Navigate to signup
-                        }) {
+                        // Navigate to signup
+                        navPath.append(Route.signUp)
+                    }       ) {
                             Text("Sign Up")
                                 .fontWeight(.medium)
                                 .foregroundColor(.green)
@@ -228,6 +226,7 @@ struct SignInView: View {
             checkBiometricType()
             checkBiometricsEnabled()
         }
+        .navigationBarHidden(true)
     }
     
     private func checkBiometricType() {

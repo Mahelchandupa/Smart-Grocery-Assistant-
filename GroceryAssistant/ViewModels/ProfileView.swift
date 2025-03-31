@@ -1,16 +1,14 @@
 //
 //  Profile.swift
 //  GroceryAssistant
-//
-//  Created by sasiri rukshan nanayakkara on 3/30/25.
-//
 
 import SwiftUI
 
 struct ProfileView: View {
-    @Environment(\.presentationMode) var presentationMode
+    @Binding var navPath: NavigationPath
     @State private var biometricLogin = true
     @State private var showPersonalInfo = false
+    @EnvironmentObject var authManager: AuthManager
     
     // Mock user data
     let user = User(
@@ -30,9 +28,9 @@ struct ProfileView: View {
                     .ignoresSafeArea(edges: .top)
                 VStack {
                     HStack {
-                        Button(action: {
-                            presentationMode.wrappedValue.dismiss()
-                        }) {
+                        Button(
+                            navPath.removeLast()
+                        ) {
                             Image(systemName: "arrow.left")
                                 .foregroundColor(.white)
                                 .font(.system(size: 20))
@@ -214,7 +212,7 @@ struct ProfileView: View {
                     .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                     
                     // Logout Button
-                    Button(action: { }) {
+                    Button(authManager.signOut()) {
                         HStack {
                             Image(systemName: "rectangle.portrait.and.arrow.right")
                                 .foregroundColor(.red)
@@ -237,6 +235,7 @@ struct ProfileView: View {
         }
         .background(Color(.systemGray6))
         .edgesIgnoringSafeArea(.top)
+        .navigationBarHidden(true)
     }
     
     private func infoRow(label: String, value: String) -> some View {

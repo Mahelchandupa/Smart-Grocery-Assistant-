@@ -1,15 +1,12 @@
 //
 //  SignUpView.swift
 //  GroceryAssistant
-//
-//  Created by sasiri rukshan nanayakkara on 3/30/25.
-//
 
 import SwiftUI
 import LocalAuthentication
 
 struct SignUpView: View {
-    @Environment(\.presentationMode) var presentationMode
+    @Binding var navPath: NavigationPath
     
     @State private var firstName: String = ""
     @State private var lastName: String = ""
@@ -36,7 +33,8 @@ struct SignUpView: View {
                 VStack {
                     HStack {
                         Button(action: {
-                            presentationMode.wrappedValue.dismiss()
+                            // Go back to sign in
+                            navPath.removeLast()
                         }) {
                             HStack {
                                 Image(systemName: "arrow.left")
@@ -300,6 +298,7 @@ struct SignUpView: View {
         .onAppear {
             checkBiometricType()
         }
+        .navigationBarHidden(true)
     }
     
     private func checkBiometricType() {
@@ -373,7 +372,9 @@ struct SignUpView: View {
             isValid = false
         }
         
-        if isValid {
+         if isValid {
+            isLoading = true
+            
             // Prepare the sign-up request
             let signUpRequest = SignUpRequest(
                 firstName: firstName,
@@ -384,11 +385,24 @@ struct SignUpView: View {
                 enableBiometrics: enableBiometrics
             )
             
-            // Log the request (in a real app, this would be sent to the server)
-            print("Sign up request:", signUpRequest)
-            
-            // Navigate to next screen or show success
-        }
+            // Call the AuthManager to handle Firebase authentication
+            authManager.signUp(with: signUpRequest) { success, error in
+                isLoading = false
+                
+                if success {
+                    // Navigate back to sign in screen
+                    navPath.removeLast()
+                } else if let error = error {
+                    // Display the appropriate error
+                    if error.contains("email") {
+                        emailError = error
+                    } else if error.contains("password") {
+                        passwordError = error
+                    } else {
+                        authManager.authError = error
+                    }
+                }
+            }
     }
 }
 
