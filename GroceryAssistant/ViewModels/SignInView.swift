@@ -16,6 +16,8 @@ struct SignInView: View {
     @State private var biometricsEnabled: Bool = false
     @State private var biometricsAvailable: Bool = false
     @Binding var navPath: NavigationPath
+    @EnvironmentObject private var authManager: AuthManager
+    @State private var isLoading = false
     
     var body: some View {
         VStack(spacing: 0) {

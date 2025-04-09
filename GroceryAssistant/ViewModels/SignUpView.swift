@@ -7,7 +7,7 @@ import LocalAuthentication
 
 struct SignUpView: View {
     @Binding var navPath: NavigationPath
-    
+    @EnvironmentObject private var authManager: AuthManager
     @State private var firstName: String = ""
     @State private var lastName: String = ""
     @State private var email: String = ""
@@ -23,6 +23,7 @@ struct SignUpView: View {
     @State private var phoneNumberError: String? = nil
     
     @State private var biometricType: BiometricType = .none
+    @State private var isLoading = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -217,7 +218,7 @@ struct SignUpView: View {
                         }
                         
                         // Biometric Authentication Option
-                        if biometricType == .faceID {
+                        if biometricType != .none {
                             Button(action: {
                                 enableBiometrics.toggle()
                             }) {
@@ -264,15 +265,21 @@ struct SignUpView: View {
                         
                         // Sign Up Button
                         Button(action: handleSignUp) {
-                            Text("Sign Up")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.green)
-                                .cornerRadius(8)
+                            if isLoading {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Text("Sign Up")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                            }
                         }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.green)
+                        .cornerRadius(8)
+                        .disabled(isLoading)
                         .padding(.top, 8)
                         
                         // Already Have Account
@@ -282,6 +289,7 @@ struct SignUpView: View {
                             
                             Button(action: {
                                 // Navigate to sign in
+                                navPath.removeLast()
                             }) {
                                 Text("Sign In")
                                     .fontWeight(.medium)
@@ -302,19 +310,19 @@ struct SignUpView: View {
     }
     
     private func checkBiometricType() {
-        let context = LAContext()
-        var error: NSError?
-        
-        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-            if context.biometryType == .faceID {
-                biometricType = .faceID
-            } else {
-                biometricType = .none
-            }
-        } else {
-            biometricType = .none
+    let context = LAContext()
+    var error: NSError?
+    
+    if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+        switch context.biometryType {
+        case .faceID: biometricType = .faceID
+        case .touchID: biometricType = .touchID
+        default: biometricType = .none
         }
+    } else {
+        biometricType = .none
     }
+}
     
     private func validateEmail(_ email: String) -> Bool {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
