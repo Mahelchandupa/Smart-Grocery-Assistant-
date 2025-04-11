@@ -1,35 +1,13 @@
 import SwiftUI
+import FirebaseFirestore
 
 struct HomeView: View {
+    @EnvironmentObject var authManager: AuthManager
     @Binding var navPath: NavigationPath
     
-    // Sample list data
-    @State private var lists = [
-        ShoppingList(
-            id: 1,
-            name: "Weekend Groceries",
-            items: 14,
-            completed: 5,
-            dueDate: "Mar 8",
-            color: HexColor(hex: "4CAF50")
-        ),
-        ShoppingList(
-            id: 2,
-            name: "Party Supplies",
-            items: 8,
-            completed: 2,
-            dueDate: "Mar 15",
-            color: HexColor(hex: "2196F3")
-        ),
-        ShoppingList(
-            id: 3,
-            name: "Essentials",
-            items: 6,
-            completed: 0,
-            dueDate: "Today",
-            color: HexColor(hex: "F44336")
-        )
-    ]
+    @State private var lists: [ShoppingList] = []
+    @State private var activeListCount = 0
+    @State private var isLoading = true
     
     var body: some View {
         VStack(spacing: 0) {
@@ -41,9 +19,9 @@ struct HomeView: View {
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.white)
                         
-                        Text("3 active lists")
+                        Text("\(activeListCount) active lists")
                             .font(.subheadline)
-                            .foregroundColor(HexColor(hex: "E8F5E9")) // Light green
+                            .foregroundColor(Color(hex: "E8F5E9"))
                     }
                     
                     Spacer()
@@ -69,142 +47,163 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
             }
-            .background(Color(hex: "4CAF50")) // Green background
-            .padding(.top, 1) // To match React Native's padding
+            .background(Color(hex: "4CAF50"))
             
             // Main Content
             ScrollView {
-                VStack(spacing: 0) {
-                    // Quick Actions
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Quick Actions")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(HexColor(hex: "616161")) // Gray-700
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "4CAF50")))
+                        .scaleEffect(1.5)
+                        .padding(.top, 40)
+                } else {
+                    VStack(spacing: 0) {
+                        // Quick Actions
+                        quickActionsSection()
+                            .padding(.top, 16)
                         
-                        HStack(spacing: 0) {
-                            Spacer()
-                            
-                            // New List
-                            quickActionButton(
-                                icon: "plus.circle.fill",
-                                color: HexColor(hex: "4CAF50"),
-                                bgColor: HexColor(hex: "E8F5E9"),
-                                label: "New List",
-                                action: {
-                                    navPath.append(Route.signIn)
-                                }
-                            )
-                            
-                            Spacer()
-                            
-                            // Grocery Lists
-                            quickActionButton(
-                                icon: "list.bullet",
-                                color: HexColor(hex: "2196F3"),
-                                bgColor: HexColor(hex: "E3F2FD"),
-                                label: "Grocery Lists",
-                                action: {}
-                            )
-                            
-                            Spacer()
-                            
-                            // Recipes
-                            quickActionButton(
-                                icon: "fork.knife",
-                                color: HexColor(hex: "FF9800"),
-                                bgColor: HexColor(hex: "FFF3E0"),
-                                label: "Recipes",
-                                action: {
-                                    navPath.append(Route.nutritionalInfo)
-                                }
-                            )
-                            
-                            Spacer()
-                            
-                            // History
-                            quickActionButton(
-                                icon: "clock.fill",
-                                color: HexColor(hex: "7e22ce"),
-                                bgColor: HexColor(hex: "F3E5F5"),
-                                label: "History",
-                                action: {
-                                    // Navigate to history
-                                }
-                            )
-                            
-                            Spacer()
-                        }
-                    }
-                    .padding(16)
-                    .background(Color.white)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 24)
-                    
-                    // Your Shopping Lists
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Your Shopping Lists")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(HexColor(hex: "424242")) // Gray-800
-                            .padding(.horizontal, 16)
+                        // Your Shopping Lists
+                        shoppingListsSection()
                         
-                        // List items
-                        ForEach(lists) { list in
-                            shoppingListItem(list)
-                                .padding(.horizontal, 16)
-                        }
+                        // Suggestions
+                        suggestionsSection()
+                            .padding(.bottom, 16)
                     }
-                    .padding(.bottom, 16)
-                    
-                    // Suggestions
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Suggested For You")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(HexColor(hex: "424242")) // Gray-800
-                            .padding(.horizontal, 16)
-                        
-                        // Suggestions box
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("You're running low on:")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(HexColor(hex: "616161")) // Gray-700
-                            
-                            HStack(spacing: 8) {
-                                ForEach(["Milk", "Eggs", "Bread"], id: \.self) { item in
-                                    Button(action: {
-                                        // Add item to list
-                                    }) {
-                                        HStack(spacing: 2) {
-                                            Text("+ \(item)")
-                                                .font(.system(size: 14))
-                                                .foregroundColor(Color(hex: "616161"))
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(HexColor(hex: "F5F5F5")) // Gray-100
-                                        .cornerRadius(20)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .background(Color.white)
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
-                        .padding(.horizontal, 16)
-                    }
-                    .padding(.bottom, 16)
                 }
             }
-            .background(HexColor(hex: "F5F7FA")) // Light gray background
+            .background(Color(hex: "F5F7FA"))
+            .refreshable {
+                await fetchLists()
+            }
         }
         .edgesIgnoringSafeArea(.top)
         .navigationBarHidden(true)
+        .task {
+            await fetchLists()
+        }
     }
     
-    // Helper function to create Quick Action buttons
+    // View Components
+    private func quickActionsSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Actions")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(hex: "616161"))
+            
+            HStack(spacing: 0) {
+                Spacer()
+                
+                quickActionButton(
+                    icon: "plus.circle.fill",
+                    color: Color(hex: "4CAF50"),
+                    bgColor: Color(hex: "E8F5E9"),
+                    label: "New List",
+                    action: {
+                        navPath.append(Route.createNewList)
+                    }
+                )
+                
+                Spacer()
+                
+                quickActionButton(
+                    icon: "list.bullet",
+                    color: Color(hex: "2196F3"),
+                    bgColor: Color(hex: "E3F2FD"),
+                    label: "Grocery Lists",
+                    action: {
+                        navPath.append(Route.lists)
+                    }
+                )
+                
+                Spacer()
+                
+                quickActionButton(
+                    icon: "fork.knife",
+                    color: Color(hex: "FF9800"),
+                    bgColor: Color(hex: "FFF3E0"),
+                    label: "Recipes",
+                    action: {
+                        navPath.append(Route.recipes)
+                    }
+                )
+                
+                Spacer()
+                
+                quickActionButton(
+                    icon: "clock.fill",
+                    color: Color(hex: "7e22ce"),
+                    bgColor: Color(hex: "F3E5F5"),
+                    label: "History",
+                    action: {
+                        navPath.append(Route.history)
+                    }
+                )
+                
+                Spacer()
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+    }
+    
+    private func shoppingListsSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Your Shopping Lists")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(Color(hex: "424242"))
+                .padding(.horizontal, 16)
+            
+            ForEach(lists) { list in
+                shoppingListItem(list)
+                    .padding(.horizontal, 16)
+            }
+        }
+        .padding(.bottom, 16)
+    }
+    
+    private func suggestionsSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Suggested For You")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(Color(hex: "424242"))
+                .padding(.horizontal, 16)
+            
+            VStack(alignment: .leading, spacing: 8) {
+                Text("You're running low on:")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(hex: "616161"))
+                
+                HStack(spacing: 8) {
+                    ForEach(["Milk", "Eggs", "Bread"], id: \.self) { item in
+                        Button(action: {
+                            // Add item to list
+                        }) {
+                            HStack(spacing: 2) {
+                                Text("+ \(item)")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Color(hex: "616161"))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color(hex: "F5F5F5"))
+                            .cornerRadius(20)
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .background(Color.white)
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    // Helper Views   
     private func quickActionButton(icon: String, color: Color, bgColor: Color, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
@@ -220,53 +219,54 @@ struct HomeView: View {
                 
                 Text(label)
                     .font(.system(size: 12))
-                    .foregroundColor(HexColor(hex: "757575")) // Gray-600
+                    .foregroundColor(Color(hex: "757575"))
             }
         }
     }
     
-    // Helper function to create shopping list items
     private func shoppingListItem(_ list: ShoppingList) -> some View {
         Button(action: {
-            // Navigate to list detail
+            navPath.append(Route.listDetail(list.id))
         }) {
             VStack(alignment: .leading, spacing: 0) {
-                // Colored top bar
                 Rectangle()
-                    .fill(list.color)
+                    .fill(Color(hex: list.color))
                     .frame(height: 8)
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(list.name)
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(HexColor(hex: "424242")) // Gray-800
+                        .foregroundColor(Color(hex: "424242"))
                     
                     HStack {
-                        Text("\(list.completed)/\(list.items) items")
+                        Text("\(list.completedItems)/\(list.items.count) items")
                             .font(.system(size: 14))
-                            .foregroundColor(HexColor(hex: "757575")) // Gray-600
+                            .foregroundColor(Color(hex: "757575"))
                         
                         Spacer()
                         
-                        Text("Due: \(list.dueDate)")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(HexColor(hex: "616161")) // Gray-700
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 4)
-                            .background(HexColor(hex: "F5F5F5")) // Gray-100
-                            .cornerRadius(16)
+                        if let dueDate = list.dueDate {
+                            Text("Due: \(dueDate.formattedMediumDate())") 
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color(hex: "616161"))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(Color(hex: "F5F5F5"))
+                                .cornerRadius(16)
+                        }
                     }
                     
                     // Progress bar
                     ZStack(alignment: .leading) {
                         Rectangle()
-                            .fill(HexColor(hex: "EEEEEE")) // Gray-200
+                            .fill(Color(hex: "EEEEEE"))
                             .frame(height: 8)
                             .cornerRadius(4)
                         
+                        let progress = list.items.isEmpty ? 0 : CGFloat(list.completedItems) / CGFloat(list.items.count)
                         Rectangle()
-                            .fill(list.color)
-                            .frame(width: CGFloat(list.completed) / CGFloat(list.items) * UIScreen.main.bounds.width * 0.85, height: 8)
+                            .fill(Color(hex: list.color))
+                            .frame(width: progress * (UIScreen.main.bounds.width - 64), height: 8)
                             .cornerRadius(4)
                     }
                 }
@@ -277,5 +277,17 @@ struct HomeView: View {
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
         }
         .padding(.bottom, 16)
+    }
+    
+    private func fetchLists() async {
+        isLoading = true
+        do {
+            let fetchedLists = try await authManager.getUserLists()
+            self.lists = Array(fetchedLists.prefix(3))
+            self.activeListCount = fetchedLists.count
+        } catch {
+            print("Error fetching lists: \(error.localizedDescription)")
+        }
+        isLoading = false
     }
 }

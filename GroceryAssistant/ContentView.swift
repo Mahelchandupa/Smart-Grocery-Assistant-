@@ -77,10 +77,14 @@ struct ContentView: View {
                     // Should not navigate to sign up when already authenticated
                     // This is included for completeness
                     EmptyView()
-                case .userProfile:
-                    UserProfileView(navPath: $navPath)
                 case .home:
-                    EmptyView() 
+                    HomeView(navPath: $navPath)
+                case .createNewList:
+                    CreateNewListView(navPath: $navPath)
+                case .recipes:
+                    RecipesView(navPath: $navPath)
+                case .recipeDetail(String recipeID):
+                    RecipeDetailView(navPath: $navPath, recipeID: recipeID)
                 }
             }
         }

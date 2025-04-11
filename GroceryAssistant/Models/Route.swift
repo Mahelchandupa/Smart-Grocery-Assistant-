@@ -8,4 +8,8 @@ enum Route: Hashable {
     case lists
     case reminder
     case history
+    case createNewList
+    case recipes
+    case listDetail(String) // Pass the list ID or name for detail view
+    case recipeDetail(String) // Pass the recipe ID or name for detail view
 }

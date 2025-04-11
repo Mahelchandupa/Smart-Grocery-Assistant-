@@ -26,4 +26,18 @@ struct FirestoreService {
             try? document.data(as: ShoppingList.self)
         }
     }
+
+    static func getAllItems() async throws -> [ShoppingItem] {
+        guard let userId = currentUser?.uid else { throw AuthError.notAuthenticated }
+        
+        let snapshot = try await Firestore.firestore()
+            .collection("users")
+            .document(userId)
+            .collection("items")
+            .getDocuments()
+        
+        return snapshot.documents.compactMap { document in
+            try? document.data(as: ShoppingItem.self)
+        }
+    }
 }

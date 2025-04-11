@@ -1,3 +1,28 @@
+// struct ShoppingList: Codable, Identifiable {
+//     var id: String
+//     var name: String
+//     var color: String
+//     var dueDate: Date?
+//     var items: [String]
+//     var completedItems: Int
+    
+//     func toDictionary() -> [String: Any] {
+//         var dict: [String: Any] = [
+//             "id": id,
+//             "name": name,
+//             "color": color,
+//             "items": items,
+//             "completedItems": completedItems
+//         ]
+        
+//         if let dueDate = dueDate {
+//             dict["dueDate"] = Timestamp(date: dueDate)
+//         }
+        
+//         return dict
+//     }
+// }
+
 struct ShoppingList: Codable, Identifiable {
     var id: String
     var name: String
@@ -6,19 +31,32 @@ struct ShoppingList: Codable, Identifiable {
     var items: [String]
     var completedItems: Int
     
-    func toDictionary() -> [String: Any] {
-        var dict: [String: Any] = [
-            "id": id,
-            "name": name,
-            "color": color,
-            "items": items,
-            "completedItems": completedItems
-        ]
+    enum CodingKeys: String, CodingKey {
+        case id, name, color, dueDate, items, completedItems
+    }
+    
+    init(id: String, name: String, color: String, dueDate: Date? = nil, items: [String], completedItems: Int) {
+        self.id = id
+        self.name = name
+        self.color = color
+        self.dueDate = dueDate
+        self.items = items
+        self.completedItems = completedItems
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        color = try container.decode(String.self, forKey: .color)
+        items = try container.decode([String].self, forKey: .items)
+        completedItems = try container.decode(Int.self, forKey: .completedItems)
         
-        if let dueDate = dueDate {
-            dict["dueDate"] = Timestamp(date: dueDate)
+        // Handle Firestore timestamp
+        if let timestamp = try? container.decode(Timestamp.self, forKey: .dueDate) {
+            dueDate = timestamp.dateValue()
+        } else {
+            dueDate = nil
         }
-        
-        return dict
     }
 }

@@ -120,6 +120,11 @@ class AuthManager: ObservableObject {
         return try await FirestoreService.getUserLists(userId: userId)
     }
 
+    func getAllItems() async throws -> [ShoppingItem] {
+        guard let userId = currentUser?.uid else { throw AuthError.notAuthenticated }
+        return try await FirestoreService.getAllItems(userId: userId)
+    }
+
     // Error Handling
     private func handleError(_ error: Error) -> String {
         let authError = error as NSError
