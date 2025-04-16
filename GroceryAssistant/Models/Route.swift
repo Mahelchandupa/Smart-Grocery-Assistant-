@@ -10,6 +10,7 @@ enum Route: Hashable {
     case history
     case createNewList
     case recipes
-    case listDetail(String) // Pass the list ID or name for detail view
-    case recipeDetail(String) // Pass the recipe ID or name for detail view
+    case listDetail(id: String) // Pass the list ID or name for detail view
+    case recipeDetail(id: String) // Pass the recipe ID or name for detail view
+    case shopping(id: String) // Pass the shopping item ID or name for detail view
 }

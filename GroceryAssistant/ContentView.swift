@@ -82,10 +82,16 @@ struct ContentView: View {
                 case .createNewList:
                     CreateNewListView(navPath: $navPath)
                 case .recipes:
-                    RecipesView(navPath: $navPath)
+                    RecipeSuggestionsView(navPath: $navPath)
                 case .recipeDetail(String recipeID):
                     RecipeDetailView(navPath: $navPath, recipeID: recipeID)
-                }
+                case .lists:
+                    ListsView(navPath: $navPath)
+                case .listDetail(let id):
+                    ListDetailView(listID: id, navPath: $navPath)
+                case .shopping(let id):
+                    ShoppingView(itemID: id, navPath: $navPath)         
+                }  
             }
         }
     }
