@@ -90,7 +90,9 @@ struct ContentView: View {
                 case .listDetail(let id):
                     ListDetailView(listID: id, navPath: $navPath)
                 case .shopping(let id):
-                    ShoppingView(itemID: id, navPath: $navPath)         
+                    ShoppingView(itemID: id, navPath: $navPath)   
+                case .reminder:
+                    ReminderView(navPath: $navPath)      
                 }  
             }
 
