@@ -6,6 +6,8 @@ import SwiftUI
 import LocalAuthentication
 
 struct SignInView: View {
+    @EnvironmentObject var authManager: AuthManager
+
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var showPassword: Bool = false
@@ -281,10 +283,32 @@ struct SignInView: View {
         }
         
         if isValid {
-            // Authenticate user with email/password
-            print("Signing in with email: \(email)")
-            // Navigate to app home on success
-        }
+                    isLoading = true
+                    
+                    let request = SignInRequest(
+                        email: email,
+                        password: password,
+                        rememberMe: rememberMe
+                    )
+                    
+                    authManager.signIn(with: request) { success, error in
+                        isLoading = false
+                        
+                        if success {
+                            // Successfully signed in
+                            // The auth state listener in AuthManager will update isAuthenticated
+                            // and trigger a navigation to the main app
+                            navPath.removeLast()
+                        } else if let error = error {
+                            // Show error to user
+                            if error.contains("email") {
+                                emailError = error
+                            } else if error.contains("password") {
+                                passwordError = error
+                            }
+                        }
+                    }
+                }
     }
     
     private func authenticateWithBiometrics() {
@@ -315,11 +339,5 @@ struct SignInView: View {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
         return emailPredicate.evaluate(with: email)
-    }
-}
-
-struct SignInView_Previews: PreviewProvider {
-    static var previews: some View {
-        SignInView()
     }
 }

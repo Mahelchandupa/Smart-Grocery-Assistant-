@@ -2,9 +2,10 @@ import SwiftUI
 import Firebase
 import FirebaseAuth
 import LocalAuthentication
+import FirebaseFirestore
 
 class AuthManager: ObservableObject {
-    @Published var currentUser: User?
+    @Published var currentUser: FirebaseAuth.User? // Explicitly using FirebaseAuth.User
     @Published var isAuthenticated = false
     @Published var authError: String?
         

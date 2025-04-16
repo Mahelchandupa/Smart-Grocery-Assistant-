@@ -1,25 +1,50 @@
-store credentials
+import Security
+import Foundation
+
 class KeychainService {
     static func saveCredentials(email: String, password: String) {
-        // In a real app, you would implement proper Keychain storage
-        // This is just for demonstration
-        UserDefaults.standard.set(email, forKey: "biometric_email")
-        // NEVER store passwords in UserDefaults in a real app
-        // This is just for demonstration purposes
-        UserDefaults.standard.set(password, forKey: "biometric_password")
+        let credentials = "\(email):\(password)"
+        let data = credentials.data(using: .utf8)!
+        
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "userCredentials",
+            kSecValueData as String: data
+        ]
+        
+        SecItemDelete(query as CFDictionary) // Remove existing item
+        SecItemAdd(query as CFDictionary, nil)
     }
     
     static func getCredentials() -> (email: String, password: String)? {
-        guard let email = UserDefaults.standard.string(forKey: "biometric_email"),
-              let password = UserDefaults.standard.string(forKey: "biometric_password") else {
-            return nil
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "userCredentials",
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        if status == errSecSuccess, let data = result as? Data,
+           let credentials = String(data: data, encoding: .utf8) {
+            let parts = credentials.split(separator: ":")
+            if parts.count == 2 {
+                return (String(parts[0]), String(parts[1]))
+            }
         }
         
-        return (email, password)
+        return nil
     }
     
     static func clearCredentials() {
-        UserDefaults.standard.removeObject(forKey: "biometric_email")
-        UserDefaults.standard.removeObject(forKey: "biometric_password")
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "userCredentials"
+        ]
+        
+        SecItemDelete(query as CFDictionary)
     }
 }
+

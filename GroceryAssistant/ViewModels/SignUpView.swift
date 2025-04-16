@@ -15,6 +15,7 @@ struct SignUpView: View {
     @State private var phoneNumber: String = ""
     @State private var enableBiometrics: Bool = false
     @State private var showPassword: Bool = false
+    @State private var isLoading: Bool = false
     
     @State private var firstNameError: String? = nil
     @State private var lastNameError: String? = nil
@@ -281,6 +282,15 @@ struct SignUpView: View {
                         .cornerRadius(8)
                         .disabled(isLoading)
                         .padding(.top, 8)
+                        .disabled(isLoading)
+                        
+                        // Error message form Firebase
+                        if let errorMsg = authManager.authError {
+                            Text(errorMsg)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.top, 8)
+                        }
                         
                         // Already Have Account
                         HStack {
@@ -380,7 +390,7 @@ struct SignUpView: View {
             isValid = false
         }
         
-         if isValid {
+        if isValid {
             isLoading = true
             
             // Prepare the sign-up request
@@ -411,11 +421,6 @@ struct SignUpView: View {
                     }
                 }
             }
-    }
-}
-
-struct SignUpView_Previews: PreviewProvider {
-    static var previews: some View {
-        SignUpView()
+        }
     }
 }
