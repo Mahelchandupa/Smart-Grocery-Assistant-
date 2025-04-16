@@ -1,5 +1,6 @@
 import FirebaseFirestore
 import FirebaseAuth
+import Foundation
 
 struct FirestoreService {
     private static let db = Firestore.firestore()
@@ -146,18 +147,88 @@ struct FirestoreService {
         
         return newCategory
     }
-}
 
-extension Encodable {
-    func toDictionary() -> [String: Any] {
-        guard let data = try? JSONEncoder().encode(self) else {
-            return [:]
-        }
+      // Get all reminders for a user
+    static func getReminders(userId: String) async throws -> [ShoppingReminder] {
+        let snapshot = try await db.collection("users")
+            .document(userId)
+            .collection("reminders")
+            .getDocuments()
         
-        guard let dictionary = try? JSONSerialization.jsonObject(with: data, options: .allowFragments) as? [String: Any] else {
-            return [:]
+        return try snapshot.documents.compactMap { document in
+            let data = document.data()
+            
+            // Get all the fields
+            guard let id = data["id"] as? String,
+                  let typeRaw = data["type"] as? String,
+                  let type = ReminderType(rawValue: typeRaw),
+                  let title = data["title"] as? String,
+                  let listId = data["listId"] as? String,
+                  let timestamp = data["date"] as? Timestamp,
+                  let message = data["message"] as? String,
+                  let isActive = data["isActive"] as? Bool else {
+                throw NSError(domain: "FirestoreService", code: 400, userInfo: [
+                    NSLocalizedDescriptionKey: "Invalid reminder data format"
+                ])
+            }
+            
+            // Optional fields
+            let listName = data["listName"] as? String
+            let itemId = data["itemId"] as? String
+            let eventId = data["eventId"] as? String
+            
+            // Convert Timestamp to Date
+            let date = timestamp.dateValue()
+            
+            return ShoppingReminder(
+                id: id,
+                type: type,
+                title: title,
+                listId: listId,
+                listName: listName,
+                itemId: itemId,
+                date: date,
+                message: message,
+                isActive: isActive,
+                eventId: eventId
+            )
         }
+    }
+    
+    // Save a new reminder
+    static func saveReminder(userId: String, reminder: ShoppingReminder) async throws {
+        var reminderData = reminder.toDictionary()
         
-        return dictionary
+        // Ensure date is stored as a Timestamp
+        reminderData["date"] = Timestamp(date: reminder.date)
+        reminderData["createdAt"] = FieldValue.serverTimestamp()
+        reminderData["updatedAt"] = FieldValue.serverTimestamp()
+        
+        try await db.collection("users")
+            .document(userId)
+            .collection("reminders")
+            .document(reminder.id)
+            .setData(reminderData)
+    }
+    
+    // Update a reminder's active status
+    static func updateReminder(userId: String, reminderId: String, isActive: Bool) async throws {
+        try await db.collection("users")
+            .document(userId)
+            .collection("reminders")
+            .document(reminderId)
+            .updateData([
+                "isActive": isActive,
+                "updatedAt": FieldValue.serverTimestamp()
+            ])
+    }
+    
+    // Delete a reminder
+    static func deleteReminder(userId: String, reminderId: String) async throws {
+        try await db.collection("users")
+            .document(userId)
+            .collection("reminders")
+            .document(reminderId)
+            .delete()
     }
 }
