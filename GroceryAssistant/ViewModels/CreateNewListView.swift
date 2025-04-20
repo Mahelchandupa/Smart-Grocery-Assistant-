@@ -2,8 +2,11 @@ import SwiftUI
 import FirebaseFirestore
 
 struct CreateNewListView: View {
+    @EnvironmentObject var authManager: AuthManager
+    @Binding var navPath: NavigationPath
+
     @Environment(\.dismiss) var dismiss
-    @State private var listName = ""
+    @State private var listName: String = ""
     @State private var selectedColor = Color.green
     @State private var dueDate: Date?
     @State private var showDatePicker = false
@@ -16,9 +19,7 @@ struct CreateNewListView: View {
         (color: Color.purple, name: "Purple"),
         (color: Color.teal, name: "Teal")
     ]
-    
-    @EnvironmentObject var authManager: AuthManager
-    
+        
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -140,6 +141,8 @@ struct CreateNewListView: View {
             .disabled(listName.trimmingCharacters(in: .whitespaces).isEmpty)
             .padding()
         }
+        .navigationBarHidden(true)
+
         .sheet(isPresented: $showDatePicker) {
             DatePicker("Select Date", selection: Binding(
                 get: { dueDate ?? Date() },
@@ -162,7 +165,7 @@ struct CreateNewListView: View {
         let newList = ShoppingList(
             id: UUID().uuidString,
             name: listName,
-            color: selectedColor.toHex(),
+            color: selectedColor.toHex() ?? "#000000",
             dueDate: dueDate,
             items: [],
             completedItems: 0

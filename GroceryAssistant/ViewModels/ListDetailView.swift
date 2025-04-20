@@ -11,6 +11,7 @@ struct ListDetailView: View {
     @State private var loading = true
     @State private var categories: [CategoryWithItems] = []
     @State private var listName = "Shopping List"
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
@@ -22,7 +23,7 @@ struct ListDetailView: View {
                 VStack(spacing: 4) {
                     HStack {
                         Button(action: {
-                            navPath.removeLast()
+                            dismiss()
                         }) {
                             Image(systemName: "arrow.left")
                                 .font(.system(size: 24))
@@ -44,11 +45,11 @@ struct ListDetailView: View {
                         Spacer()
                     }
                 }
-                .padding(.top, 48)
-                .padding(.bottom, 12)
+                .padding(.top, 25)
+                .padding(.bottom, 20)
                 .padding(.horizontal, 16)
             }
-            .frame(height: 120)
+            .frame(height: 60)
             
             // Search Bar
             HStack(spacing: 8) {

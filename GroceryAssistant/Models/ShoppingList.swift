@@ -1,10 +1,17 @@
-struct ShoppingList: Codable, Identifiable {
+import SwiftUI
+import FirebaseCore
+
+struct ShoppingList: Codable, Identifiable, Equatable {
     var id: String
     var name: String
     var color: String
     var dueDate: Date?
-    var items: [String]
+    var items: [ShoppingItem]
     var completedItems: Int
+    
+    static func == (lhs: ShoppingList, rhs: ShoppingList) -> Bool {
+        return lhs.id == rhs.id
+    }
     
     enum CodingKeys: String, CodingKey {
         case id, name, color, dueDate, items, completedItems
@@ -15,7 +22,8 @@ struct ShoppingList: Codable, Identifiable {
         self.name = name
         self.color = color
         self.dueDate = dueDate
-        self.items = items
+        // Convert strings to ShoppingItem objects
+        self.items = items.map { ShoppingItem(name: $0) }
         self.completedItems = completedItems
     }
     
@@ -24,7 +32,16 @@ struct ShoppingList: Codable, Identifiable {
         id = try container.decode(String.self, forKey: .id)
         name = try container.decode(String.self, forKey: .name)
         color = try container.decode(String.self, forKey: .color)
-        items = try container.decode([String].self, forKey: .items)
+        
+        // Handle item decoding - either directly as ShoppingItems or convert from strings
+        do {
+            items = try container.decode([ShoppingItem].self, forKey: .items)
+        } catch {
+            // Handle the case where items are stored as strings
+            let stringItems = try container.decode([String].self, forKey: .items)
+            items = stringItems.map { ShoppingItem(name: $0) }
+        }
+        
         completedItems = try container.decode(Int.self, forKey: .completedItems)
         
         // Handle Firestore timestamp

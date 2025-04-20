@@ -1,29 +1,25 @@
-//
-//  Profile.swift
-//  GroceryAssistant
-
 import SwiftUI
+import FirebaseFirestore
+import FirebaseAuth
 
 struct ProfileView: View {
     @Binding var navPath: NavigationPath
+    @Environment(\.dismiss) private var dismiss
     @State private var biometricLogin = true
     @State private var showPersonalInfo = false
     @EnvironmentObject var authManager: AuthManager
     
-    // Modified User struct - moved outside of view for clarity
-    let user: UserProfile
+    @State private var showingLogoutError = false
+    @State private var logoutErrorMessage = ""
     
-    // Initialize with default user data
+    // User state
+    @State private var user: User?
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    
+    // Initialize with empty user and fetch data on appear
     init(navPath: Binding<NavigationPath>) {
         self._navPath = navPath
-        self.user = UserProfile(
-            firstName: "Sarah",
-            lastName: "Johnson",
-            email: "sarah.johnson@example.com",
-            phone: "+1 (555) 123-4567",
-            avatar: "/api/placeholder/100/100",
-            memberSince: "March 2023"
-        )
     }
     
     var body: some View {
@@ -32,26 +28,120 @@ struct ProfileView: View {
             headerView
             
             ScrollView {
-                VStack(spacing: 16) {
-                    // User Profile Card
-                    profileCardView
-                    
-                    // Account Settings
-                    accountSettingsView
-                    
-                    // Help & Support
-                    helpAndSupportView
-                    
-                    // Logout Button
-                    logoutButton
+                if isLoading {
+                    VStack {
+                        ProgressView()
+                            .padding()
+                        Text("Loading profile...")
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .padding(.top, 100)
+                } else if let errorMessage = errorMessage {
+                    VStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                            .padding()
+                        
+                        Text("Error loading profile")
+                            .font(.headline)
+                            .padding(.bottom, 4)
+                        
+                        Text(errorMessage)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                        
+                        Button("Try Again") {
+                            Task {
+                                await fetchUserData()
+                            }
+                        }
+                        .padding()
+                        .background(AppColors.green500)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                        .padding(.top)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .padding(.top, 50)
+                } else if let user = user {
+                    VStack(spacing: 16) {
+                        // User Profile Card
+                        profileCardView(for: user)
+                        
+                        // Account Settings
+                        accountSettingsView(for: user)
+                        
+                        // Help & Support
+                        helpAndSupportView
+                        
+                        // Logout Button
+                        logoutButton
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
             }
         }
         .background(Color(.systemGray6))
         .edgesIgnoringSafeArea(.top)
         .navigationBarHidden(true)
+        .onAppear {
+            Task {
+                await fetchUserData()
+            }
+        }
+        .alert("Logout Error", isPresented: $showingLogoutError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(logoutErrorMessage)
+        }
+    }
+    
+    // Fetch user data from Firebase
+    private func fetchUserData() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            // Get the current user ID
+            guard let firebaseUser = Auth.auth().currentUser else {
+                errorMessage = "No user is signed in"
+                isLoading = false
+                return
+            }
+            
+            // Fetch user data from Firestore
+            let userData = try await FirestoreService.getUserData(uid: firebaseUser.uid)
+            
+            // Update UI on main thread
+            await MainActor.run {
+                // Create a User from Firebase user and Firestore data
+                self.user = User.from(firebaseUser: firebaseUser, userData: userData)
+                self.isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load profile: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+        }
+    }
+    
+    // Format timestamp to readable date
+    private func formatMemberSince(_ timestamp: Timestamp?) -> String {
+        guard let timestamp = timestamp else {
+            return "Unknown"
+        }
+        
+        let date = timestamp.dateValue()
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
     
     // MARK: - Component Views
@@ -64,7 +154,7 @@ struct ProfileView: View {
             VStack {
                 HStack {
                     Button(action: {
-                        navPath.removeLast()
+                        dismiss()
                     }) {
                         Image(systemName: "arrow.left")
                             .foregroundColor(.white)
@@ -88,7 +178,7 @@ struct ProfileView: View {
     }
     
     // Profile card view
-    private var profileCardView: some View {
+    private func profileCardView(for user: User) -> some View {
         VStack(alignment: .leading) {
             HStack(spacing: 16) {
                 // Avatar placeholder
@@ -123,7 +213,7 @@ struct ProfileView: View {
     }
     
     // Account settings view
-    private var accountSettingsView: some View {
+    private func accountSettingsView(for user: User) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Account Settings")
                 .font(.headline)
@@ -132,10 +222,10 @@ struct ProfileView: View {
                 .padding(.bottom, 4)
             
             // Personal Information Dropdown
-            personalInfoSection
+            personalInfoSection(for: user)
             
             // Biometric Login Toggle
-            biometricLoginSection
+            biometricLoginSection(for: user)
         }
         .padding(16)
         .background(Color.white)
@@ -144,7 +234,7 @@ struct ProfileView: View {
     }
     
     // Personal info dropdown section
-    private var personalInfoSection: some View {
+    private func personalInfoSection(for user: User) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: {
                 withAnimation {
@@ -175,7 +265,7 @@ struct ProfileView: View {
                     infoRow(label: "Last Name:", value: user.lastName)
                     infoRow(label: "Email:", value: user.email)
                     infoRow(label: "Phone:", value: user.phone)
-                    infoRow(label: "Member Since:", value: user.memberSince)
+                    infoRow(label: "Member Since:", value: user.memberSince ?? "Unknown")
                 }
                 .padding(12)
                 .background(Color(.systemGray6))
@@ -189,7 +279,7 @@ struct ProfileView: View {
     }
     
     // Biometric login toggle section
-    private var biometricLoginSection: some View {
+    private func biometricLoginSection(for user: User) -> some View {
         HStack {
             Image(systemName: "key.fill")
                 .foregroundColor(Color(.darkGray))
@@ -200,12 +290,23 @@ struct ProfileView: View {
             
             Spacer()
             
-            Toggle("", isOn: $biometricLogin)
-                .labelsHidden()
-                .toggleStyle(SwitchToggleStyle(tint: AppColors.green500))
+            Toggle("", isOn: Binding(
+                get: { self.biometricLogin },
+                set: { newValue in
+                    self.biometricLogin = newValue
+                    // Here you would typically update the user's preferences in Firestore
+                    // For example: Task { try? await updateUserBiometricPreference(userId: user.id, enabled: newValue) }
+                }
+            ))
+            .labelsHidden()
+            .toggleStyle(SwitchToggleStyle(tint: AppColors.green500))
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 4)
+        .onAppear {
+            // Initialize toggle with user preference from Firebase
+            self.biometricLogin = user.enableBiometrics
+        }
     }
     
     // Help and support view
@@ -264,7 +365,13 @@ struct ProfileView: View {
     // Logout button
     private var logoutButton: some View {
         Button(action: {
-            authManager.signOut()
+            do {
+                try authManager.signOut()
+            } catch {
+                // Set the error message and show the alert
+                logoutErrorMessage = error.localizedDescription
+                showingLogoutError = true
+            }
         }) {
             HStack {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -296,16 +403,6 @@ struct ProfileView: View {
                 .foregroundColor(Color(.darkGray))
         }
     }
-}
-
-// Separate user profile model
-struct UserProfile {
-    let firstName: String
-    let lastName: String
-    let email: String
-    let phone: String
-    let avatar: String
-    let memberSince: String
 }
 
 // Preview provider

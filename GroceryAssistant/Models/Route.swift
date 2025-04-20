@@ -11,6 +11,5 @@ enum Route: Hashable {
     case createNewList
     case recipes
     case listDetail(id: String) // Pass the list ID or name for detail view
-    case recipeDetail(id: String) // Pass the recipe ID or name for detail view
     case shopping(id: String) // Pass the shopping item ID or name for detail view
 }

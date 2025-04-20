@@ -10,6 +10,7 @@ import SwiftUI
 struct LocatorView: View {
     @Binding var navPath: NavigationPath
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) private var dismiss
     
     
     var body: some View {
@@ -21,7 +22,7 @@ struct LocatorView: View {
                 VStack {
                     HStack {
                         Button(action: {
-                            navPath.removeLast()}) {
+                            navPath.append(Route.home)}) {
                                 Image(systemName: "arrow.left")
                                     .foregroundColor(.white)
                                     .font(.system(size: 20))

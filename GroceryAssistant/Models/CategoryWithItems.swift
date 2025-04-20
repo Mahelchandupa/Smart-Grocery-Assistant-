@@ -1,3 +1,5 @@
+import SwiftUI
+
 struct CategoryWithItems: Identifiable {
     let id: String
     let name: String

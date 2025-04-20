@@ -1,3 +1,5 @@
+import SwiftUI
+
 struct ReminderCard: View {
     let reminder: ShoppingReminder
     let toggleReminderStatus: (String) -> Void

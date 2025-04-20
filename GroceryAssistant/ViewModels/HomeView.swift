@@ -44,9 +44,11 @@ struct HomeView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 20)
+                .padding(.top, 40)
+                .padding(.bottom, 8)
             }
+            .frame(height: 120)
             .background(Color(hex: "4CAF50"))
             
             // Main Content
@@ -226,7 +228,7 @@ struct HomeView: View {
     
     private func shoppingListItem(_ list: ShoppingList) -> some View {
         Button(action: {
-            navPath.append(Route.listDetail(list.id))
+            navPath.append(Route.listDetail(id: list.id))
         }) {
             VStack(alignment: .leading, spacing: 0) {
                 Rectangle()

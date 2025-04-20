@@ -7,6 +7,7 @@ struct ReminderView: View {
     @StateObject private var reminderManager = ReminderManager()
     @State private var showNewReminderSheet = false
     @State private var newReminderType: ReminderType = .list
+    @Environment(\.dismiss) private var dismiss 
     
     var body: some View {
         ZStack {
@@ -34,7 +35,7 @@ struct ReminderView: View {
             reminderManager.requestAccess { granted in
                 if granted {
                     Task {
-                        await reminderManager.fetchReminders(userId: authManager.currentUser?.uid)
+                        await reminderManager.fetchReminders(userId: authManager.currentFirebaseUser?.uid)
                     }
                 }
             }
@@ -47,7 +48,7 @@ struct ReminderView: View {
                     Task {
                         await reminderManager.addReminder(
                             reminder: reminder,
-                            userId: authManager.currentUser?.uid
+                            userId: authManager.currentFirebaseUser?.uid
                         )
                     }
                 }
@@ -64,7 +65,7 @@ struct ReminderView: View {
             VStack {
                 HStack {
                     Button(action: {
-                        navPath.removeLast()
+                        dismiss()
                     }) {
                         HStack {
                             Image(systemName: "arrow.left")
@@ -139,7 +140,7 @@ struct ReminderView: View {
                                 Task {
                                     await reminderManager.toggleReminderStatus(
                                         id: id,
-                                        userId: authManager.currentUser?.uid
+                                        userId: authManager.currentFirebaseUser?.uid
                                     )
                                 }
                             },
@@ -147,7 +148,7 @@ struct ReminderView: View {
                                 Task {
                                     await reminderManager.deleteReminder(
                                         id: id,
-                                        userId: authManager.currentUser?.uid
+                                        userId: authManager.currentFirebaseUser?.uid
                                     )
                                 }
                             }
@@ -172,7 +173,7 @@ struct ReminderView: View {
                                 Task {
                                     await reminderManager.toggleReminderStatus(
                                         id: id,
-                                        userId: authManager.currentUser?.uid
+                                        userId: authManager.currentFirebaseUser?.uid
                                     )
                                 }
                             },
@@ -180,7 +181,7 @@ struct ReminderView: View {
                                 Task {
                                     await reminderManager.deleteReminder(
                                         id: id,
-                                        userId: authManager.currentUser?.uid
+                                        userId: authManager.currentFirebaseUser?.uid
                                     )
                                 }
                             }
@@ -241,7 +242,7 @@ struct NewReminderSheet: View {
                         Button(action: {
                             Task {
                                 // Fetch available lists
-                                if let userId = authManager.currentUser?.uid {
+                                if let userId = authManager.currentFirebaseUser?.uid {
                                     do {
                                         availableLists = try await FirestoreService.getUserLists(userId: userId)
                                         showListPicker = true
@@ -278,7 +279,7 @@ struct NewReminderSheet: View {
                                 guard let list = selectedList else { return }
                                 
                                 Task {
-                                    if let userId = authManager.currentUser?.uid {
+                                    if let userId = authManager.currentFirebaseUser?.uid {
                                         do {
                                             availableItems = try await FirestoreService.getListItems(userId: userId, listId: list.id)
                                             showItemPicker = true
@@ -331,13 +332,13 @@ struct NewReminderSheet: View {
                             .padding()
                             .background(Color(UIColor.systemGray6))
                             .cornerRadius(8)
-                            .onChange(of: selectedList) { _ in
+                            .onChange(of: selectedList) { oldValue, newValue in
                                 updateDefaultMessage()
                             }
-                            .onChange(of: selectedItem) { _ in
+                            .onChange(of: selectedItem) { oldValue, newValue in
                                 updateDefaultMessage()
                             }
-                            .onChange(of: reminderType) { _ in
+                            .onChange(of: reminderType) { oldValue, newValue in
                                 updateDefaultMessage()
                             }
                     }
@@ -453,7 +454,10 @@ struct NewReminderSheet: View {
             List {
                 ForEach(availableItems) { item in
                     Button(action: {
-                        selectedItem = item
+                        // Create a copy of the item with the listName set
+                        var updatedItem = item
+                        updatedItem.listName = selectedList?.name
+                        selectedItem = updatedItem
                         showItemPicker = false
                     }) {
                         HStack {

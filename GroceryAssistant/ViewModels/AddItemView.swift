@@ -1,7 +1,10 @@
+import SwiftUI
+
 struct AddItemView: View {
     let listId: String
     @Binding var isPresented: Bool
     var onItemAdded: () -> Void
+    @EnvironmentObject var authManager: AuthManager
     
     @State private var itemName = ""
     @State private var category = ""
@@ -86,7 +89,7 @@ struct AddItemView: View {
     
     private func addItem() {
         Task {
-            guard let userId = Auth.auth().currentUser?.uid else { return }
+            guard let userId = authManager.currentFirebaseUser?.uid else { return }
             
             isSubmitting = true
             
@@ -124,16 +127,21 @@ struct AddItemView: View {
                     id: UUID().uuidString,
                     name: itemName,
                     checked: false,
+                    needToBuy: needToBuy,
+                    price: nil,
+                    originalPrice: nil,
+                    useSimpleCount: useSimpleCount,
+                    targetQuantity: targetQty,
+                    targetUnit: targetUnitValue,
                     categoryId: categoryObj.id,
                     categoryName: categoryObj.name,
-                    useSimpleCount: useSimpleCount,
+                    listId: listId,
+                    listName: nil,
+                    createdDate: Date(),
+                    updatedDate: Date(),
+                    userId: userId,
                     currentQuantity: currentQty,
-                    targetQuantity: targetQty,
-                    currentUnit: currentUnitValue,
-                    targetUnit: targetUnitValue,
-                    needToBuy: needToBuy,
-                    createdAt: Date(),
-                    updatedAt: Date()
+                    currentUnit: currentUnitValue
                 )
                 
                 _ = try await FirestoreService.createItem(

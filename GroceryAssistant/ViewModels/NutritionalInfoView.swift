@@ -10,7 +10,7 @@ import SwiftUI
 struct NutritionalInfoView: View {
     @Binding var navPath: NavigationPath
     @EnvironmentObject var authManager: AuthManager
-    
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +21,7 @@ struct NutritionalInfoView: View {
                 VStack {
                     HStack {
                         Button(action: {
-                            navPath.removeLast()}) {
+                            dismiss()}) {
                                 Image(systemName: "arrow.left")
                                     .foregroundColor(.white)
                                     .font(.system(size: 20))

@@ -1,11 +1,12 @@
 import FirebaseAuth
 
+// AuthService for Firebase authentication operations
 struct AuthService {
     static func signUp(
         email: String,
         password: String,
         userData: [String: Any]
-    ) async throws -> User {
+    ) async throws -> FirebaseAuth.User {
         let authResult = try await Auth.auth().createUser(
             withEmail: email,
             password: password
@@ -20,7 +21,7 @@ struct AuthService {
         return authResult.user
     }
     
-    static func signIn(email: String, password: String) async throws -> User {
+    static func signIn(email: String, password: String) async throws -> FirebaseAuth.User {
         let authResult = try await Auth.auth().signIn(
             withEmail: email,
             password: password

@@ -10,12 +10,10 @@ struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     
     var body: some View {
-        Group {
+        ZStack {
             if authManager.isAuthenticated {
-                // User is authenticated - show main app with tab bar
                 mainAppView
             } else {
-                // User is not authenticated - show sign in
                 NavigationStack(path: $navPath) {
                     SignInView(navPath: $navPath)
                         .navigationDestination(for: Route.self) { route in
@@ -43,8 +41,10 @@ struct ContentView: View {
     
     // Extract the main app view with tabs to keep code clean
     private var mainAppView: some View {
-        NavigationStack(path: $navPath) {
-            ZStack(alignment: .bottom) {
+        // Here's the key change - we need a better way to manage the tab and navigation state
+        ZStack(alignment: .bottom) {
+            NavigationStack(path: $navPath) {
+                // This wraps the actual content that will display navigation destinations
                 TabView(selection: $selectedTab) {
                     NutritionalInfoView(navPath: $navPath)
                         .tag(0)
@@ -61,52 +61,61 @@ struct ContentView: View {
                     ReminderView(navPath: $navPath)
                         .tag(4)
                 }
-                .edgesIgnoringSafeArea(.bottom)
-                
+                .navigationDestination(for: Route.self) { route in
+                    // Handle all navigation destinations here
+                    destinationView(for: route)
+                }
+            }
+            
+            // The tab bar is now outside the NavigationStack but inside the ZStack
+            // This ensures it's always visible at the bottom
+            if navPath.isEmpty {
                 CustomTabBar(selectedTab: $selectedTab)
+                    .transition(.move(edge: .bottom))
             }
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .profile:
-                    ProfileView(navPath: $navPath)
-                case .signIn:
-                    // Should not navigate to sign in when already authenticated
-                    // This is included for completeness
-                    EmptyView()
-                case .signUp:
-                    // Should not navigate to sign up when already authenticated
-                    // This is included for completeness
-                    EmptyView()
-                case .home:
-                    HomeView(navPath: $navPath)
-                case .createNewList:
-                    CreateNewListView(navPath: $navPath)
-                case .recipes:
-                    RecipeSuggestionsView(navPath: $navPath)
-                case .recipeDetail(String recipeID):
-                    RecipeDetailView(navPath: $navPath, recipeID: recipeID)
-                case .lists:
-                    ListsView(navPath: $navPath)
-                case .listDetail(let id):
-                    ListDetailView(listID: id, navPath: $navPath)
-                case .shopping(let id):
-                    ShoppingView(itemID: id, navPath: $navPath)   
-                case .reminder:
-                    ReminderView(navPath: $navPath)      
-                }  
-            }
-
+        }
+    }
+    
+    // Extract navigation destination logic to a separate function for clarity
+    @ViewBuilder
+    private func destinationView(for route: Route) -> some View {
+        switch route {
+        case .profile:
+            ProfileView(navPath: $navPath)
+        case .signIn, .signUp:
+            // Should not navigate to sign in/up when already authenticated
+            EmptyView()
+        case .home:
+            HomeView(navPath: $navPath)
+        case .createNewList:
+            CreateNewListView(navPath: $navPath)
+        case .recipes:
+            RecipeSuggestionsView(navPath: $navPath)
+        case .lists:
+            ListsView(navPath: $navPath)
+        case .listDetail(let id):
+            ListDetailView(listId: id, navPath: $navPath)
+        case .shopping(let id):
+            ShoppingView(itemID: id, navPath: $navPath)
+        case .reminder:
+            ReminderView(navPath: $navPath)
+        case .nutritionalInfo:
+            NutritionalInfoView(navPath: $navPath)
+        case .locator:
+            LocatorView(navPath: $navPath)
+        case .history:
+            HistoryView(navPath: $navPath)
         }
     }
 }
 
-// Custom tab bar view
+// Custom tab bar view - unchanged
 struct CustomTabBar: View {
     @Binding var selectedTab: Int
     
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(0..<5) { index in
+            ForEach(0..<5, id: \.self) { index in
                 Button(action: {
                     selectedTab = index
                 }) {
@@ -117,15 +126,15 @@ struct CustomTabBar: View {
                                     .stroke(Color(AppColors.green600), lineWidth: 2)
                                     .frame(width: 50, height: 50)
                             }
-                            
+
                             Image(systemName: getIconName(for: index))
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 25, height: 25)
                                 .foregroundColor(selectedTab == index ? Color(AppColors.green600) : Color(AppColors.green500))
                         }
-                        
-                        if index != 2 { // Not home button
+
+                        if index != 2 {
                             Text(getTabName(for: index))
                                 .font(.system(size: 10))
                                 .foregroundColor(selectedTab == index ? Color(AppColors.green600) : Color(AppColors.green500))
@@ -176,7 +185,6 @@ struct CustomShape: Shape {
         return Path(path.cgPath)
     }
 }
-
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()

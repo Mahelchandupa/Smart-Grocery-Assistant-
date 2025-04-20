@@ -4,50 +4,143 @@ import FirebaseAuth
 import LocalAuthentication
 import FirebaseFirestore
 
+// Main AuthManager class
 class AuthManager: ObservableObject {
-    @Published var currentUser: FirebaseAuth.User? // Explicitly using FirebaseAuth.User
+    @Published var currentFirebaseUser: FirebaseAuth.User?
+    @Published var currentUser: User?
     @Published var isAuthenticated = false
     @Published var authError: String?
-        
+    
+    // We'll make this optional since it might not always be needed
+    var navPath: Binding<NavigationPath>?
+    
     init() {
         setupAuthListener()
     }
     
+    convenience init(navPath: Binding<NavigationPath>) {
+        self.init()
+        self.navPath = navPath
+    }
+    
     private func setupAuthListener() {
         Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.currentUser = user
+            self?.currentFirebaseUser = user
             self?.isAuthenticated = user != nil
+            
+            if let user = user {
+                // Fetch additional user data when auth state changes
+                Task {
+                    do {
+                        let userData = try await FirestoreService.getUserData(uid: user.uid)
+                        DispatchQueue.main.async {
+                            self?.currentUser = User.from(firebaseUser: user, userData: userData)
+                        }
+                    } catch {
+                        print("Error fetching user data: \(error.localizedDescription)")
+                    }
+                }
+            } else {
+                self?.currentUser = nil
+            }
         }
     }
     
-    // Sign In Methods  
+    // Sign In Method with async/await
     func signIn(with request: SignInRequest) async throws {
-        currentUser = try await AuthService.signIn(
-            email: request.email,
-            password: request.password
-        )
+        do {
+            // Sign in with Firebase
+            let firebaseUser = try await AuthService.signIn(
+                email: request.email,
+                password: request.password
+            )
+            
+            // If "remember me" is selected, save credentials for biometric login
+            if request.rememberMe {
+                _ = KeychainService.saveCredentials(
+                    email: request.email,
+                    password: request.password
+                )
+            }
+            
+            // Fetch user data
+            let userData = try await FirestoreService.getUserData(uid: firebaseUser.uid)
+            
+            // Update our current user
+            DispatchQueue.main.async {
+                self.currentFirebaseUser = firebaseUser
+                self.currentUser = User.from(firebaseUser: firebaseUser, userData: userData)
+            }
+        } catch {
+            DispatchQueue.main.async {
+                self.authError = self.handleError(error)
+            }
+            throw error
+        }
     }
     
-    // Sign Up Methods
-     func signUp(with request: SignUpRequest) async throws {
-        let userData: [String: Any] = [
-            "firstName": request.firstName,
-            "lastName": request.lastName,
-            "email": request.email,
-            "phoneNumber": request.phoneNumber,
-            "enableBiometrics": request.enableBiometrics ?? false
-        ]
-        
-        currentUser = try await AuthService.signUp(
-            email: request.email,
-            password: request.password,
-            userData: userData
-        )
+    // Sign In Method with completion handler (for biometric auth)
+    func signIn(with request: SignInRequest, completion: @escaping (Bool, String?) -> Void) {
+        Task {
+            do {
+                try await signIn(with: request)
+                completion(true, nil)
+            } catch {
+                completion(false, handleError(error))
+            }
+        }
+    }
+    
+    // Sign Up Method
+    func signUp(with request: SignUpRequest) async throws {
+        do {
+            let userData: [String: Any] = [
+                "firstName": request.firstName,
+                "lastName": request.lastName,
+                "email": request.email,
+                "phoneNumber": request.phoneNumber,
+                "enableBiometrics": request.enableBiometrics ?? false,
+                "createdAt": FieldValue.serverTimestamp()
+            ]
+            
+            // Sign up with Firebase
+            let firebaseUser = try await AuthService.signUp(
+                email: request.email,
+                password: request.password,
+                userData: userData
+            )
+            
+            // If biometrics enabled, save credentials
+            if request.enableBiometrics == true {
+                _ = KeychainService.saveCredentials(
+                    email: request.email,
+                    password: request.password
+                )
+            }
+            
+            // Update our current user
+            DispatchQueue.main.async {
+                self.currentFirebaseUser = firebaseUser
+                self.currentUser = User.from(firebaseUser: firebaseUser, userData: userData)
+            }
+        } catch {
+            DispatchQueue.main.async {
+                self.authError = self.handleError(error)
+            }
+            throw error
+        }
     }
     
     // Sign Out Method
-     func signOut() throws {
-        try AuthService.signOut()
+    func signOut() throws {
+        do {
+            try AuthService.signOut()
+        } catch {
+            DispatchQueue.main.async {
+                self.authError = self.handleError(error)
+            }
+            throw error
+        }
     }
     
     // Biometric Authentication
@@ -82,47 +175,21 @@ class AuthManager: ObservableObject {
             completion(false, "Biometric authentication not available")
         }
     }
-    
-    // Helper Methods
-    private func createUserProfile(user: User, request: SignUpRequest, completion: @escaping (Bool) -> Void) {
-        // Create a reference to Firestore
-        let db = Firestore.firestore()
-        
-        // Create a user document with additional profile information
-        db.collection("users").document(user.uid).setData([
-            "firstName": request.firstName,
-            "lastName": request.lastName,
-            "email": request.email,
-            "phoneNumber": request.phoneNumber,
-            "createdAt": FieldValue.serverTimestamp(),
-            "enabledBiometrics": request.enableBiometrics ?? false
-        ]) { error in
-            if let error = error {
-                print("Error creating user profile: \(error.localizedDescription)")
-                completion(false)
-                return
-            }
-            
-            // Profile created successfully
-            completion(true)
-        }
-    }
-    
      
     // ------------- Firestore Methods -------------- //
 
     func createList(_ list: ShoppingList) async throws {
-        guard let userId = currentUser?.uid else { throw AuthError.notAuthenticated }
+        guard let userId = currentFirebaseUser?.uid else { throw AuthError.notAuthenticated }
         try await FirestoreService.createList(userId: userId, list: list)
     }
     
     func getUserLists() async throws -> [ShoppingList] {
-        guard let userId = currentUser?.uid else { throw AuthError.notAuthenticated }
+        guard let userId = currentFirebaseUser?.uid else { throw AuthError.notAuthenticated }
         return try await FirestoreService.getUserLists(userId: userId)
     }
 
     func getAllItems() async throws -> [ShoppingItem] {
-        guard let userId = currentUser?.uid else { throw AuthError.notAuthenticated }
+        guard let userId = currentFirebaseUser?.uid else { throw AuthError.notAuthenticated }
         return try await FirestoreService.getAllItems(userId: userId)
     }
 
@@ -146,8 +213,13 @@ class AuthManager: ObservableObject {
         default:
             return "An error occurred: \(error.localizedDescription)"
         }
-        .navigationBarHidden(true)
-        .alert(isPresented: .constant(authManager.authError != nil)) {
+    }
+}
+
+// Extension to create an error alert when needed
+extension View {
+    func authErrorAlert(authManager: AuthManager) -> some View {
+        alert(isPresented: .constant(authManager.authError != nil)) {
             Alert(
                 title: Text("Authentication Error"),
                 message: Text(authManager.authError ?? "An unknown error occurred"),
@@ -157,6 +229,4 @@ class AuthManager: ObservableObject {
             )
         }
     }
-    
 }
-    

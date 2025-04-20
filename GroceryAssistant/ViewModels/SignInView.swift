@@ -7,6 +7,7 @@ import LocalAuthentication
 
 struct SignInView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Binding var navPath: NavigationPath
 
     @State private var email: String = ""
     @State private var password: String = ""
@@ -17,8 +18,6 @@ struct SignInView: View {
     @State private var biometricType: BiometricType = .none
     @State private var biometricsEnabled: Bool = false
     @State private var biometricsAvailable: Bool = false
-    @Binding var navPath: NavigationPath
-    @EnvironmentObject private var authManager: AuthManager
     @State private var isLoading = false
     
     var body: some View {
@@ -95,9 +94,9 @@ struct SignInView: View {
                                 .fontWeight(.medium)
                             
                             TextField("Enter your email", text: $email)
-                                .keyboardType(.emailAddress)
-                                .autocapitalization(.none)
-                                .disableAutocorrection(true)
+//                                .keyboardType(.emailAddress)
+//                                .autocapitalization(.none)
+//                                .disableAutocorrection(true)
                                 .padding()
                                 .background(Color(.systemGray6))
                                 .cornerRadius(10)
@@ -122,12 +121,12 @@ struct SignInView: View {
                             HStack {
                                 if showPassword {
                                     TextField("Enter your password", text: $password)
-                                        .autocapitalization(.none)
-                                        .disableAutocorrection(true)
+//                                        .autocapitalization(.none)
+//                                        .disableAutocorrection(true)
                                 } else {
                                     SecureField("Enter your password", text: $password)
-                                        .autocapitalization(.none)
-                                        .disableAutocorrection(true)
+//                                        .autocapitalization(.none)
+//                                        .disableAutocorrection(true)
                                 }
                                 
                                 Button(action: {
@@ -298,7 +297,7 @@ struct SignInView: View {
                             // Successfully signed in
                             // The auth state listener in AuthManager will update isAuthenticated
                             // and trigger a navigation to the main app
-                            navPath.removeLast()
+                            navPath.append(Route.home)
                         } else if let error = error {
                             // Show error to user
                             if error.contains("email") {

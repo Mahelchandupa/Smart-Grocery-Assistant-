@@ -1,3 +1,5 @@
+import SwiftUI
+
 // Reminder types
 enum ReminderType: String, Codable {
     case list

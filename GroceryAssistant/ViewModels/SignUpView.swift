@@ -24,7 +24,6 @@ struct SignUpView: View {
     @State private var phoneNumberError: String? = nil
     
     @State private var biometricType: BiometricType = .none
-    @State private var isLoading = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -299,7 +298,9 @@ struct SignUpView: View {
                             
                             Button(action: {
                                 // Navigate to sign in
-                                navPath.removeLast()
+                                if navPath.count > 0 {
+                                    navPath.removeLast()
+                                }
                             }) {
                                 Text("Sign In")
                                     .fontWeight(.medium)
@@ -404,23 +405,24 @@ struct SignUpView: View {
             )
             
             // Call the AuthManager to handle Firebase authentication
-            authManager.signUp(with: signUpRequest) { success, error in
-                isLoading = false
-                
-                if success {
-                    // Navigate back to sign in screen
-                    navPath.removeLast()
-                } else if let error = error {
-                    // Display the appropriate error
-                    if error.contains("email") {
-                        emailError = error
-                    } else if error.contains("password") {
-                        passwordError = error
+            Task {
+                isLoading = true
+                do {
+                    try await authManager.signUp(with: signUpRequest)
+                    navPath.append(Route.signIn)
+                } catch {
+                    isLoading = false
+                    let errorMessage = error.localizedDescription
+                    if errorMessage.contains("email") {
+                        emailError = errorMessage
+                    } else if errorMessage.contains("password") {
+                        passwordError = errorMessage
                     } else {
-                        authManager.authError = error
+                        authManager.authError = errorMessage
                     }
                 }
             }
+
         }
     }
 }

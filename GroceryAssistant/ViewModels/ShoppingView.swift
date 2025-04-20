@@ -1,10 +1,12 @@
 import SwiftUI
+import Firebase
 
 struct ShoppingView: View {
     let itemID: String
     @Binding var navPath: NavigationPath
     @EnvironmentObject var authManager: AuthManager
     @State private var categories: [ShoppingCategory] = []
+    @Environment(\.dismiss) private var dismiss 
     @State private var listName: String = "Shopping List"
     @State private var totalCost: Double = 0
     @State private var totalSavings: Double = 0
@@ -67,6 +69,7 @@ struct ShoppingView: View {
                 .edgesIgnoringSafeArea(.bottom)
             }
         }
+        .navigationBarHidden(true)
         .onAppear {
             fetchShoppingData()
         }
@@ -85,93 +88,137 @@ struct ShoppingView: View {
         return categories
             .map { category in
                 var newCategory = category
-                newCategory.items = category.items.filter { item in
-                    item.needToBuy && !item.checked
+                // Ensure items is not nil before filtering
+                if let items = category.items {
+                    newCategory.items = items.filter { item in
+                        item.needToBuy && !item.checked
+                    }
+                } else {
+                    newCategory.items = []
                 }
                 return newCategory
             }
-            .filter { !$0.items.isEmpty }
+            .filter { category in
+                // Check if items exists and is not empty
+                if let items = category.items {
+                    return !items.isEmpty
+                }
+                return false
+            }
     }
     
     private var totalItems: Int {
         categories.reduce(0) { sum, category in
-            sum + category.items.count
+            sum + (category.items?.count ?? 0)
         }
     }
     
     private var purchasedItems: Int {
         categories.reduce(0) { sum, category in
-            sum + category.items.filter { $0.checked }.count
+            sum + (category.items?.filter { $0.checked }.count ?? 0)
         }
     }
     
     private var toBuyItems: Int {
         categories.reduce(0) { sum, category in
-            sum + category.items.filter { $0.needToBuy && !$0.checked }.count
+            sum + (category.items?.filter { $0.needToBuy && !$0.checked }.count ?? 0)
         }
     }
     
-    // UI Components   
+    // UI Components
+    // MARK: - Main Header Component
     private var headerView: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: {
-                    navPath.removeLast()
-                }) {
-                    HStack {
-                        Image(systemName: "arrow.left")
-                            .foregroundColor(.white)
-                        
-                        Text(listName)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                    }
-                }
-                
-                Spacer()
-                
-                HStack {
-                    Text("\(purchasedItems)/\(totalItems)")
-                        .foregroundColor(Color.green.opacity(0.8))
-                    
-                    Image(systemName: "cart")
-                        .foregroundColor(.white)
-                }
-            }
-            .padding()
-            
-            // Shopping Progress
-            VStack(spacing: 4) {
-                HStack {
-                    Text("Shopping Progress")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    Text("\(Int((Double(purchasedItems) / Double(max(totalItems, 1))) * 100))%")
-                        .foregroundColor(.white)
-                }
-                
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(Color.green.opacity(0.3))
-                        .frame(height: 8)
-                    
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(Color.white)
-                        .frame(width: UIScreen.main.bounds.width * 0.9 * CGFloat(purchasedItems) / CGFloat(max(totalItems, 1)), height: 8)
-                }
-            }
-            .padding()
-            .background(Color.green.opacity(0.2))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            .padding(.bottom)
+            navigationHeader
+            shoppingProgressSection
         }
         .background(Color.green)
+    }
+
+    // MARK: - Navigation Header Component
+    private var navigationHeader: some View {
+        HStack {
+            backButton
+            Spacer()
+            cartStatus
+        }
+        .padding()
+    }
+
+    // MARK: - Back Button Component
+    private var backButton: some View {
+        Button(action: {
+            dismiss()
+        }) {
+            HStack {
+                Image(systemName: "arrow.left")
+                    .foregroundColor(.white)
+                
+                Text(listName)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+        }
+    }
+
+    // MARK: - Cart Status Component
+    private var cartStatus: some View {
+        HStack {
+            Text("\(purchasedItems)/\(totalItems)")
+                .foregroundColor(Color.green.opacity(0.8))
+            
+            Image(systemName: "cart")
+                .foregroundColor(.white)
+        }
+    }
+
+    // MARK: - Shopping Progress Section Component
+    private var shoppingProgressSection: some View {
+        VStack(spacing: 4) {
+            progressHeader
+            ProgressBar(purchasedItems: purchasedItems, totalItems: totalItems)
+                .frame(height: 8)
+        }
+        .padding()
+        .background(Color.green.opacity(0.2))
+        .cornerRadius(10)
+        .padding(.horizontal)
+        .padding(.bottom)
+    }
+
+    // MARK: - Progress Header Component
+    private var progressHeader: some View {
+        HStack {
+            Text("Shopping Progress")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Text("\(Int((Double(purchasedItems) / Double(max(totalItems, 1))) * 100))%")
+                .foregroundColor(.white)
+        }
+    }
+
+    private func ProgressBar(purchasedItems: Int, totalItems: Int) -> some View {
+        let progress = CGFloat(purchasedItems) / CGFloat(max(totalItems, 1))
+        let progressWidth = UIScreen.main.bounds.width * 0.9 * progress
+
+        return ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color.green.opacity(0.3))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(Color.white, lineWidth: 1)
+                )
+
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color.white)
+                .frame(width: progressWidth, height: 8)
+        }
+        .frame(height: 8)
     }
     
     private var filterToggleView: some View {
@@ -233,15 +280,17 @@ struct ShoppingView: View {
                 .frame(width: 50, height: 50)
                 .foregroundColor(.gray.opacity(0.5))
             
-            Text(showOnlyToBuy 
-                ? "No items left to purchase!" 
+            Text(showOnlyToBuy
+                ? "No items left to purchase!"
                 : "No items in this shopping list")
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.top)
             
             Button(action: {
-                navPath.removeLast()
+                if navPath.count > 0 {
+                    navPath.removeLast()
+                }
             }) {
                 Text("Return to List")
                     .foregroundColor(.white)
@@ -272,7 +321,7 @@ struct ShoppingView: View {
                     Spacer()
                     
                     HStack {
-                        Text("\(category.items.filter { $0.checked }.count)/\(category.items.count)")
+                        Text("\((category.items?.filter { $0.checked }.count ?? 0))/\(category.items?.count ?? 0)")
                             .font(.caption)
                             .foregroundColor(.gray)
                         
@@ -287,7 +336,7 @@ struct ShoppingView: View {
             
             // Category Items
             if expandedCategories[category.id, default: true] {
-                ForEach(category.items, id: \.id) { item in
+                ForEach(category.items ?? [], id: \.id) { item in
                     itemRow(item, categoryId: category.id)
                 }
             }
@@ -428,7 +477,9 @@ struct ShoppingView: View {
             Divider()
             
             Button(action: {
-                navPath.removeLast()
+                if navPath.count > 0 {
+                    navPath.removeLast()
+                }
             }) {
                 Text("Return to List")
                     .foregroundColor(.white)
@@ -438,7 +489,7 @@ struct ShoppingView: View {
                     .background(Color.green)
                     .cornerRadius(25)
                     .padding(.horizontal)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 30)
             }
             .background(Color.white)
         }
@@ -555,7 +606,7 @@ struct ShoppingView: View {
         Task {
             do {
                 loading = true
-                guard let userId = authManager.currentUser?.uid else { return }
+                guard let userId = authManager.currentFirebaseUser?.uid else { return }
                 
                 // Get list name
                 let list = try await FirestoreService.getListById(userId: userId, listId: itemID)
@@ -592,24 +643,34 @@ struct ShoppingView: View {
     }
     
     private func groupItemsByCategory(_ items: [ShoppingItem]) -> [ShoppingCategory] {
-        var groupedItems = [String: ShoppingCategory]()
+        var categoriesDict = [String: ShoppingCategory]()
         
         for item in items {
             let categoryKey = item.categoryId ?? "uncategorized"
             let categoryName = item.categoryName ?? "Uncategorized"
             
-            if groupedItems[categoryKey] == nil {
-                groupedItems[categoryKey] = ShoppingCategory(
+            if categoriesDict[categoryKey] == nil {
+                categoriesDict[categoryKey] = ShoppingCategory(
                     id: categoryKey,
                     name: categoryName,
                     items: []
                 )
             }
             
-            groupedItems[categoryKey]?.items.append(item)
+            // Make a mutable copy of the category
+            if var category = categoriesDict[categoryKey] {
+                // Ensure items is initialized
+                if category.items == nil {
+                    category.items = []
+                }
+                // Append the item
+                category.items?.append(item)
+                // Update the dictionary
+                categoriesDict[categoryKey] = category
+            }
         }
         
-        return Array(groupedItems.values)
+        return Array(categoriesDict.values)
     }
     
     private func calculateTotals() {
@@ -617,7 +678,7 @@ struct ShoppingView: View {
         var savings: Double = 0
         
         for category in categories {
-            for item in category.items {
+            for item in category.items ?? [] {
                 if let price = item.price {
                     cost += price
                     
@@ -642,20 +703,22 @@ struct ShoppingView: View {
         // Optimistically update UI
         for (index, category) in categories.enumerated() {
             if category.id == categoryId {
-                for (itemIndex, categoryItem) in category.items.enumerated() {
-                    if categoryItem.id == item.id {
-                        categories[index].items[itemIndex].checked.toggle()
-                        break
+                if var items = category.items {
+                    for (itemIndex, categoryItem) in items.enumerated() {
+                        if categoryItem.id == item.id {
+                            items[itemIndex].checked.toggle()
+                            categories[index].items = items
+                            break
+                        }
                     }
                 }
-                break
             }
         }
         
         // Update in Firestore
         Task {
             do {
-                guard let userId = authManager.currentUser?.uid else { return }
+                guard let userId = authManager.currentFirebaseUser?.uid else { return }
                 try await FirestoreService.toggleItemChecked(
                     userId: userId,
                     itemId: item.id,
@@ -720,7 +783,7 @@ struct ShoppingView: View {
         // Update Firestore
         Task {
             do {
-                guard let userId = authManager.currentUser?.uid else { return }
+                guard let userId = authManager.currentFirebaseUser?.uid else { return }
                 try await FirestoreService.updateItem(
                     userId: userId,
                     itemId: item.id,
@@ -729,28 +792,31 @@ struct ShoppingView: View {
                 
                 // Update local state
                 for (categoryIndex, category) in categories.enumerated() {
-                    for (itemIndex, categoryItem) in category.items.enumerated() {
-                        if categoryItem.id == item.id {
-                            // Apply updates to local item
-                            if item.useSimpleCount, let quantity = Int(tempQuantity) {
-                                categories[categoryIndex].items[itemIndex].targetQuantity = quantity
-                            } else if !tempUnit.isEmpty {
-                                categories[categoryIndex].items[itemIndex].targetUnit = tempUnit
+                    if var items = category.items {
+                        for (itemIndex, categoryItem) in items.enumerated() {
+                            if categoryItem.id == item.id {
+                                // Apply updates to local item
+                                if item.useSimpleCount, let quantity = Int(tempQuantity) {
+                                    items[itemIndex].targetQuantity = quantity
+                                } else if !tempUnit.isEmpty {
+                                    items[itemIndex].targetUnit = tempUnit
+                                }
+                                
+                                if let price = Double(tempPrice) {
+                                    items[itemIndex].price = price
+                                } else {
+                                    items[itemIndex].price = nil
+                                }
+                                
+                                if let originalPrice = Double(tempOriginalPrice) {
+                                    items[itemIndex].originalPrice = originalPrice
+                                } else {
+                                    items[itemIndex].originalPrice = nil
+                                }
+                                
+                                categories[categoryIndex].items = items
+                                break
                             }
-                            
-                            if let price = Double(tempPrice) {
-                                categories[categoryIndex].items[itemIndex].price = price
-                            } else {
-                                categories[categoryIndex].items[itemIndex].price = nil
-                            }
-                            
-                            if let originalPrice = Double(tempOriginalPrice) {
-                                categories[categoryIndex].items[itemIndex].originalPrice = originalPrice
-                            } else {
-                                categories[categoryIndex].items[itemIndex].originalPrice = nil
-                            }
-                            
-                            break
                         }
                     }
                 }

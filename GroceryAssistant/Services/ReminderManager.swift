@@ -23,7 +23,7 @@ class ReminderManager: ObservableObject {
         if #available(iOS 17.0, *) {
             Task {
                 do {
-                    let granted = try await eventStore.requestFullAccessToReminders()
+                    _ = try await eventStore.requestFullAccessToReminders()
                     
                     // Also request notification permissions
                     let notificationCenter = UNUserNotificationCenter.current()
@@ -92,27 +92,65 @@ class ReminderManager: ObservableObject {
     }
     
     // Add a new reminder
+//    func addReminder(reminder: ShoppingReminder, userId: String?) async {
+//        guard let userId = userId else { return }
+//        
+//        do {
+//            // 1. Create the reminder in EventKit
+//            let eventId = try await createEventKitReminder(reminder: reminder)
+//            
+//            // 2. Update the reminder with the EventKit ID
+//            var updatedReminder = reminder
+//            updatedReminder.eventId = eventId
+//            
+//            // 3. Save to Firestore
+//            try await FirestoreService.saveReminder(userId: userId, reminder: updatedReminder)
+//            
+//            // 4. Schedule a local notification
+//            scheduleNotification(for: updatedReminder)
+//            
+//            // 5. Refresh the reminders list
+//            await fetchReminders(userId: userId)
+//        } catch {
+//            print("Error adding reminder: \(error)")
+//        }
+//    }
+    
     func addReminder(reminder: ShoppingReminder, userId: String?) async {
-        guard let userId = userId else { return }
+        guard let userId = userId else {
+            print("Error: userId is nil")
+            return
+        }
         
         do {
+            print("Creating EventKit reminder...")
             // 1. Create the reminder in EventKit
             let eventId = try await createEventKitReminder(reminder: reminder)
+            print("EventKit reminder created with ID: \(eventId)")
             
             // 2. Update the reminder with the EventKit ID
             var updatedReminder = reminder
             updatedReminder.eventId = eventId
             
+            print("Saving reminder to Firestore...")
             // 3. Save to Firestore
             try await FirestoreService.saveReminder(userId: userId, reminder: updatedReminder)
+            print("Reminder saved to Firestore successfully")
             
             // 4. Schedule a local notification
+            print("Scheduling notification...")
             scheduleNotification(for: updatedReminder)
+            print("Notification scheduled successfully")
             
             // 5. Refresh the reminders list
             await fetchReminders(userId: userId)
         } catch {
-            print("Error adding reminder: \(error)")
+            print("Error adding reminder: \(error.localizedDescription)")
+            // More detailed error info
+            if let nsError = error as NSError? {
+                print("Error domain: \(nsError.domain), code: \(nsError.code)")
+                print("User info: \(nsError.userInfo)")
+            }
         }
     }
     
@@ -219,33 +257,44 @@ class ReminderManager: ObservableObject {
     }
     
     private func updateEventKitReminder(eventId: String, isActive: Bool) async throws {
-        // Get the EKReminder by ID
         let predicate = eventStore.predicateForReminders(in: nil)
-        let reminders = try await eventStore.fetchReminders(matching: predicate)
-        
+        let reminders = try await withCheckedThrowingContinuation { continuation in
+            eventStore.fetchReminders(matching: predicate) { reminders in
+                if let reminders {
+                    continuation.resume(returning: reminders)
+                } else {
+                    continuation.resume(throwing: NSError(domain: "ReminderManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch reminders"]))
+                }
+            }
+        }
+
         guard let ekReminder = reminders.first(where: { $0.calendarItemIdentifier == eventId }) else {
             throw NSError(domain: "ReminderManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "EventKit reminder not found"])
         }
-        
-        // Update isCompleted status based on isActive
+
         ekReminder.isCompleted = !isActive
-        
-        // Save changes
         try eventStore.save(ekReminder, commit: true)
     }
-    
+
     private func deleteEventKitReminder(eventId: String) async throws {
-        // Get the EKReminder by ID
         let predicate = eventStore.predicateForReminders(in: nil)
-        let reminders = try await eventStore.fetchReminders(matching: predicate)
-        
+        let reminders = try await withCheckedThrowingContinuation { continuation in
+            eventStore.fetchReminders(matching: predicate) { reminders in
+                if let reminders {
+                    continuation.resume(returning: reminders)
+                } else {
+                    continuation.resume(throwing: NSError(domain: "ReminderManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch reminders"]))
+                }
+            }
+        }
+
         guard let ekReminder = reminders.first(where: { $0.calendarItemIdentifier == eventId }) else {
             throw NSError(domain: "ReminderManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "EventKit reminder not found"])
         }
-        
-        // Delete the reminder
+
         try eventStore.remove(ekReminder, commit: true)
     }
+
     
     // MARK: - Push Notifications
     

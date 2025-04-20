@@ -9,6 +9,17 @@ struct FirestoreService {
         try await db.collection("users").document(uid).setData(data)
     }
     
+    static func getUserData(uid: String) async throws -> [String: Any] {
+          let db = Firestore.firestore()
+          let document = try await db.collection("users").document(uid).getDocument()
+          
+          guard let data = document.data() else {
+              throw AuthError.notAuthenticated
+          }
+          
+          return data
+      }
+    
     static func createList(userId: String, list: ShoppingList) async throws {
         let listWithDate = list.toDictionary() // Convert to [String: Any]
         try await db.collection("users")
