@@ -11,7 +11,6 @@ struct ListDetailView: View {
     @State private var loading = true
     @State private var categories: [CategoryWithItems] = []
     @State private var listName = "Shopping List"
-    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
@@ -23,7 +22,9 @@ struct ListDetailView: View {
                 VStack(spacing: 4) {
                     HStack {
                         Button(action: {
-                            dismiss()
+                            if navPath.count > 0 {
+                                navPath.removeLast()
+                            }
                         }) {
                             Image(systemName: "arrow.left")
                                 .font(.system(size: 24))
@@ -158,7 +159,7 @@ struct ListDetailView: View {
                         .cornerRadius(24)
                         .padding(.horizontal, 16)
                 }
-                .padding(.vertical, 16)
+                .padding(.vertical, 30)
                 .background(Color.white)
                 .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: -2)
             }
@@ -308,7 +309,7 @@ struct ListDetailView: View {
                 updateItemCheckedState(categoryId: categoryId, itemId: itemId, isChecked: !isChecked)
                 
                 // Update in Firestore
-                try await FirestoreService.toggleItemChecked(userId: userId, itemId: itemId, isChecked: !isChecked)
+                try await FirestoreService.toggleItemChecked(userId: userId, itemId: itemId, isChecked: !isChecked, listId: listId)
             } catch {
                 print("Error toggling item: \(error.localizedDescription)")
                 // Revert on error

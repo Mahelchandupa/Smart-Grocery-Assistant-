@@ -77,32 +77,54 @@ struct FirestoreService {
         }
     }
     
-    static func toggleItemChecked(userId: String, itemId: String, isChecked: Bool) async throws {
-        try await db.collection("users")
-            .document(userId)
-            .collection("items")
-            .document(itemId)
-            .updateData([
-                "checked": isChecked,
-                "updatedDate": FieldValue.serverTimestamp()
-            ])
+    static func toggleItemChecked(userId: String, itemId: String, isChecked: Bool, listId: String) async throws {
+        let userRef = db.collection("users").document(userId)
+        let itemRef = userRef.collection("items").document(itemId)
+        let listRef = userRef.collection("lists").document(listId)
+
+        // 1. Update item checked state
+        try await itemRef.updateData([
+            "checked": isChecked,
+            "updatedDate": FieldValue.serverTimestamp()
+        ])
+
+        // 2. Update completedItems count in the list
+        let incrementAmount: Int64 = isChecked ? 1 : -1
+
+        try await listRef.updateData([
+            "completedItems": FieldValue.increment(incrementAmount)
+        ])
     }
     
     static func updateItem(userId: String, itemId: String, updates: [String: Any]) async throws {
         var updatedData = updates
         updatedData["updatedDate"] = FieldValue.serverTimestamp()
         
-        try await db.collection("users")
+        // Try to get the document first to check if it exists
+        let docRef = db.collection("users")
             .document(userId)
             .collection("items")
             .document(itemId)
-            .updateData(updatedData)
+        
+        let docSnapshot = try await docRef.getDocument()
+        
+        if !docSnapshot.exists {
+            print("WARNING: Document with ID \(itemId) does not exist in Firestore!")
+            // You could implement alternative lookup logic here if needed
+            
+            // For now, throw an error
+            throw NSError(domain: "FirestoreService", code: 404,
+                         userInfo: [NSLocalizedDescriptionKey: "Item with ID \(itemId) not found"])
+        }
+        
+        // If we get here, the document exists, so proceed with the update
+        try await docRef.updateData(updatedData)
     }
     
     static func createItem(userId: String, item: ShoppingItem, listId: String, categoryId: String?) async throws -> ShoppingItem {
-        let itemsCollection = db.collection("users")
-            .document(userId)
-            .collection("items")
+        let userRef = db.collection("users").document(userId)
+        let itemsCollection = userRef.collection("items")
+        let listRef = userRef.collection("lists").document(listId)
         
         var itemData = item.toDictionary()
         itemData["listId"] = listId
@@ -111,17 +133,25 @@ struct FirestoreService {
         itemData["createdDate"] = FieldValue.serverTimestamp()
         itemData["updatedDate"] = FieldValue.serverTimestamp()
         itemData["checked"] = item.checked
+
+        // Create the item document
+        try await itemsCollection.document(item.id).setData(itemData)
+
+        // Increment the totalItems count in the list document
+        try await listRef.updateData([
+            "totalItems": FieldValue.increment(Int64(1))
+        ])
         
-        let documentReference = try await itemsCollection.addDocument(data: itemData)
-        
+        if item.checked {
+            itemData["completedItems"] = FieldValue.increment(Int64(1))
+        }
+
         // Retrieve the newly created item to get server timestamps
-        let newItem = try await itemsCollection.document(documentReference.documentID).getDocument()
+        let newItem = try await itemsCollection.document(item.id).getDocument()
         guard var createdItem = try? newItem.data(as: ShoppingItem.self) else {
             throw NSError(domain: "FirestoreService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to retrieve created item"])
         }
-        
-        // Update ID to match Firestore document ID
-        createdItem.id = documentReference.documentID
+
         return createdItem
     }
     

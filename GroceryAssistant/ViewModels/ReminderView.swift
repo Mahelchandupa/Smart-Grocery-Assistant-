@@ -10,11 +10,7 @@ struct ReminderView: View {
     @Environment(\.dismiss) private var dismiss 
     
     var body: some View {
-        ZStack {
-            Color(UIColor.systemGray6)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
+        VStack(spacing: 0) {
                 // Header
                 headerView
                 
@@ -30,16 +26,16 @@ struct ReminderView: View {
                     reminderListView
                 }
             }
-        }
-        .onAppear {
-            reminderManager.requestAccess { granted in
-                if granted {
-                    Task {
-                        await reminderManager.fetchReminders(userId: authManager.currentFirebaseUser?.uid)
+            .onAppear {
+                reminderManager.requestAccess { granted in
+                    if granted {
+                        Task {
+                            await reminderManager.fetchReminders(userId: authManager.currentFirebaseUser?.uid)
+                        }
                     }
                 }
-            }
         }
+        
         .sheet(isPresented: $showNewReminderSheet) {
             NewReminderSheet(
                 isPresented: $showNewReminderSheet,

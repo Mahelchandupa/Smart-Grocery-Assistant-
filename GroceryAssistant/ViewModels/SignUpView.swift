@@ -351,6 +351,33 @@ struct SignUpView: View {
         return phonePredicate.evaluate(with: phoneNumber)
     }
     
+    private func enrollBiometrics() {
+        let context = LAContext()
+        var error: NSError?
+        
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            let reason = "Enable biometric login for your account"
+            
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        print("Biometric enrollment successful")
+                        // We don't need to do anything here - the enableBiometrics flag will be
+                        // passed to the SignUpRequest, and KeychainService.saveCredentials will
+                        // be called in the AuthManager.signUp method
+                    } else {
+                        // Handle error or fallback to password
+                        print("Biometric enrollment failed: \(error?.localizedDescription ?? "Unknown error")")
+                        self.enableBiometrics = false
+                    }
+                }
+            }
+        } else {
+            enableBiometrics = false
+            print("Biometrics not available: \(error?.localizedDescription ?? "Unknown error")")
+        }
+    }
+    
     private func handleSignUp() {
         // Reset errors
         firstNameError = nil
@@ -360,6 +387,11 @@ struct SignUpView: View {
         phoneNumberError = nil
         
         var isValid = true
+        
+        // If user wants biometrics, authenticate first to confirm their identity
+               if enableBiometrics {
+                   enrollBiometrics()
+               }
         
         // Validate first name
         if firstName.isEmpty {
@@ -409,7 +441,6 @@ struct SignUpView: View {
                 isLoading = true
                 do {
                     try await authManager.signUp(with: signUpRequest)
-                    navPath.append(Route.signIn)
                 } catch {
                     isLoading = false
                     let errorMessage = error.localizedDescription

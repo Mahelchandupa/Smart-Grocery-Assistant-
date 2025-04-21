@@ -63,6 +63,8 @@ struct ProfileView: View {
                         .foregroundColor(.white)
                         .cornerRadius(8)
                         .padding(.top)
+                        
+                        logoutButton
                     }
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)

@@ -241,14 +241,14 @@ struct HomeView: View {
                         .foregroundColor(Color(hex: "424242"))
                     
                     HStack {
-                        Text("\(list.completedItems)/\(list.items.count) items")
+                        Text("\(list.completedItems)/\(list.totalItems) items")
                             .font(.system(size: 14))
                             .foregroundColor(Color(hex: "757575"))
                         
                         Spacer()
                         
-                        if let dueDate = list.dueDate {
-                            Text("Due: \(dueDate.formattedMediumDate())") 
+                        if list.dueDate != nil {
+                            Text("Due: \(list.dueDate != nil ? formattedDate(list.dueDate!) : "No due date")")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(Color(hex: "616161"))
                                 .padding(.horizontal, 12)
@@ -265,7 +265,7 @@ struct HomeView: View {
                             .frame(height: 8)
                             .cornerRadius(4)
                         
-                        let progress = list.items.isEmpty ? 0 : CGFloat(list.completedItems) / CGFloat(list.items.count)
+                        let progress = CGFloat(list.completedItems) / CGFloat(list.totalItems)
                         Rectangle()
                             .fill(Color(hex: list.color))
                             .frame(width: progress * (UIScreen.main.bounds.width - 64), height: 8)
@@ -292,4 +292,15 @@ struct HomeView: View {
         }
         isLoading = false
     }
+    
+    private func formattedDate(_ date: Date) -> String {
+        if Calendar.current.isDateInToday(date) {
+            return "Today"
+        }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d" // Example: "Apr 20"
+        return formatter.string(from: date)
+    }
+
 }

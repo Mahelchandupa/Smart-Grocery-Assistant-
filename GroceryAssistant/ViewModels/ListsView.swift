@@ -8,7 +8,43 @@ struct ListsView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            headerSection
+            // Header
+            ZStack {
+                Color(hex: "16A34A")
+                    .ignoresSafeArea(edges: .top)
+                
+                VStack(spacing: 4) {
+                    HStack {
+                        Button(action: {
+                            if navPath.count > 0 {
+                                navPath.removeLast()
+                            }
+                        }) {
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 24))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.trailing, 12)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("My Lists")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Text("\(lists.count) active lists")
+                                .font(.subheadline)
+                                .foregroundColor(Color(hex: "E8F5E9"))
+                        }
+                        
+                        Spacer()
+                    }
+                }
+                .padding(.top, 25)
+                .padding(.bottom, 20)
+                .padding(.horizontal, 16)
+            }
+            .frame(height: 60)
             mainContent
         }
         .background(Color(hex: "F9FAFB"))
@@ -19,56 +55,6 @@ struct ListsView: View {
     }
     
     // MARK: - Main Components
-    
-    private var headerSection: some View {
-        ZStack {
-            Color(hex: "16A34A") // Green
-                .ignoresSafeArea(edges: .top)
-            
-            headerContent
-        }
-        .frame(height: 60)
-    }
-    
-    private var headerContent: some View {
-        VStack {
-            HStack {
-                backButton
-                
-                titleSection
-                
-                Spacer()
-            }
-        }
-        .padding(.top, 25)
-        .padding(.bottom, 20)
-        .padding(.horizontal, 16)
-    }
-    
-    private var backButton: some View {
-        Button(action: {
-            if navPath.count > 0 {
-                navPath.removeLast()
-            }
-        }) {
-            Image(systemName: "arrow.left")
-                .font(.system(size: 24))
-                .foregroundColor(.white)
-        }
-        .padding(.trailing, 8)
-    }
-    
-    private var titleSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("My Lists")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text("\(lists.count) active lists")
-                .font(.subheadline)
-                .foregroundColor(Color(hex: "E8F5E9")) // Light green
-        }
-    }
     
     private var mainContent: some View {
         Group {
@@ -221,7 +207,7 @@ struct ShoppingListCard: View {
     
     private var listStats: some View {
         HStack {
-            Text("\(list.completed)/\(list.totalItems) items")
+            Text("\(list.completedItems)/\(list.totalItems) items")
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "6B7280"))
             
@@ -250,7 +236,7 @@ struct ShoppingListCard: View {
                 .cornerRadius(4)
             
             if list.totalItems > 0 {
-                let progressWidth = (CGFloat(list.completed) / CGFloat(list.totalItems)) * (UIScreen.main.bounds.width - 64)
+                let progressWidth = (CGFloat(list.completedItems) / CGFloat(list.totalItems)) * (UIScreen.main.bounds.width - 64)
                 
                 Rectangle()
                     .fill(Color(list.color))
@@ -260,29 +246,13 @@ struct ShoppingListCard: View {
         }
     }
     
-    // MARK: - Helper Methods
-    
     private func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        
-        // If date is today, show "Today"
         if Calendar.current.isDateInToday(date) {
             return "Today"
         }
-        
-        return formatter.string(from: date)
-    }
-}
 
-extension ShoppingList {
-    var completed: Int {
-        get { items.filter { $0.checked }.count }
-        set { }
-    }
-    
-    var totalItems: Int {
-        get { items.count }
-        set { }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d" // Example: "Apr 20"
+        return formatter.string(from: date)
     }
 }

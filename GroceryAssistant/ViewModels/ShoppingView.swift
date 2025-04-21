@@ -722,7 +722,8 @@ struct ShoppingView: View {
                 try await FirestoreService.toggleItemChecked(
                     userId: userId,
                     itemId: item.id,
-                    isChecked: !item.checked
+                    isChecked: !item.checked,
+                    listId: itemID
                 )
                 
                 // Recalculate totals after toggling
@@ -754,7 +755,10 @@ struct ShoppingView: View {
     }
     
     private func saveItemChanges() {
-        guard let item = currentEditItem else { return }
+        guard let item = currentEditItem else {
+            showEditModal = false
+            return
+        }
         
         var updates = [String: Any]()
         
@@ -780,6 +784,9 @@ struct ShoppingView: View {
             updates["originalPrice"] = nil
         }
         
+        // Close the modal first to improve UI responsiveness
+        showEditModal = false
+        
         // Update Firestore
         Task {
             do {
@@ -790,45 +797,28 @@ struct ShoppingView: View {
                     updates: updates
                 )
                 
-                // Update local state
-                for (categoryIndex, category) in categories.enumerated() {
-                    if var items = category.items {
-                        for (itemIndex, categoryItem) in items.enumerated() {
-                            if categoryItem.id == item.id {
-                                // Apply updates to local item
-                                if item.useSimpleCount, let quantity = Int(tempQuantity) {
-                                    items[itemIndex].targetQuantity = quantity
-                                } else if !tempUnit.isEmpty {
-                                    items[itemIndex].targetUnit = tempUnit
-                                }
-                                
-                                if let price = Double(tempPrice) {
-                                    items[itemIndex].price = price
-                                } else {
-                                    items[itemIndex].price = nil
-                                }
-                                
-                                if let originalPrice = Double(tempOriginalPrice) {
-                                    items[itemIndex].originalPrice = originalPrice
-                                } else {
-                                    items[itemIndex].originalPrice = nil
-                                }
-                                
-                                categories[categoryIndex].items = items
-                                break
-                            }
-                        }
-                    }
-                }
-                
-                // Recalculate totals after update
-                DispatchQueue.main.async {
-                    self.calculateTotals()
-                    self.showEditModal = false
-                }
+                // After successful update, refresh the data instead of manual updating
+                await fetchUpdatedData()
             } catch {
                 print("Error updating item: \(error)")
+                // Show error alert or feedback to user
             }
+        }
+    }
+    
+    private func fetchUpdatedData() async {
+        do {
+            guard let userId = authManager.currentFirebaseUser?.uid else { return }
+            let items = try await FirestoreService.getListItems(userId: userId, listId: itemID)
+            let groupedItems = groupItemsByCategory(items)
+            
+            // Update state on main thread
+            DispatchQueue.main.async {
+                self.categories = groupedItems
+                self.calculateTotals()
+            }
+        } catch {
+            print("Error refreshing data: \(error)")
         }
     }
     

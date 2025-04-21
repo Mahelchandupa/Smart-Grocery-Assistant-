@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import EventKit
 import UserNotifications
 
@@ -23,23 +24,39 @@ class ReminderManager: ObservableObject {
         if #available(iOS 17.0, *) {
             Task {
                 do {
-                    _ = try await eventStore.requestFullAccessToReminders()
+                    print("Requesting EventKit permission for iOS 17+")
+                    // For iOS 17, we need to request full access
+                    let accessGranted = try await eventStore.requestFullAccessToReminders()
+                    print("EventKit full access granted: \(accessGranted)")
                     
-                    // Also request notification permissions
+                    if !accessGranted {
+                        print("⚠️ User denied EventKit permissions!")
+                        DispatchQueue.main.async {
+                            completion(false)
+                            self.promptToOpenSettings() // 🔥 Add this line
+                        }
+                        return
+                    }
+                    
+                    // Request notification permissions
                     let notificationCenter = UNUserNotificationCenter.current()
                     
-                    // Request notification permissions on main thread
-                    DispatchQueue.main.async {
+                    let notifStatus = await withCheckedContinuation { continuation in
                         notificationCenter.requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
                             if let error = error {
                                 print("Error requesting notification permission: \(error)")
                             }
-                            completion(granted)
+                            continuation.resume(returning: granted)
                         }
                     }
                     
+                    print("Notification permission granted: \(notifStatus)")
+                    DispatchQueue.main.async {
+                        completion(accessGranted && notifStatus)
+                    }
+                    
                 } catch {
-                    print("Error requesting EventKit permission: \(error)")
+                    print("❌ Error requesting EventKit permission: \(error)")
                     DispatchQueue.main.async {
                         completion(false)
                     }
@@ -47,12 +64,22 @@ class ReminderManager: ObservableObject {
             }
         } else {
             // iOS 16 and earlier
+            print("Requesting EventKit permission for iOS 16 and earlier")
             eventStore.requestAccess(to: .reminder) { granted, error in
+                print("EventKit permission granted: \(granted)")
                 if let error = error {
                     print("Error requesting EventKit permission: \(error)")
                 }
                 
-                // Also request notification permissions
+                if !granted {
+                    print("⚠️ User denied EventKit permissions!")
+                    DispatchQueue.main.async {
+                        completion(false)
+                    }
+                    return
+                }
+                                
+                // Request notification permissions
                 let notificationCenter = UNUserNotificationCenter.current()
                 
                 notificationCenter.requestAuthorization(options: [.alert, .badge, .sound]) { notifGranted, notifError in
@@ -67,6 +94,15 @@ class ReminderManager: ObservableObject {
             }
         }
     }
+    
+    private func promptToOpenSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
+        
+        if UIApplication.shared.canOpenURL(settingsURL) {
+            UIApplication.shared.open(settingsURL, options: [:], completionHandler: nil)
+        }
+    }
+
     
     // Fetch reminders from Firestore
     func fetchReminders(userId: String?) async {
@@ -225,8 +261,24 @@ class ReminderManager: ObservableObject {
     }
     
     // MARK: - EventKit Integration
-    
     private func createEventKitReminder(reminder: ShoppingReminder) async throws -> String {
+        // First, verify we have permissions
+        if #available(iOS 17.0, *) {
+            guard await EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else {
+                print("❌ EventKit permission not granted - need full access")
+                throw NSError(domain: "ReminderManager",
+                              code: 403,
+                              userInfo: [NSLocalizedDescriptionKey: "EventKit permission not granted"])
+            }
+        } else {
+            guard EKEventStore.authorizationStatus(for: .reminder) == .authorized else {
+                print("❌ EventKit permission not granted")
+                throw NSError(domain: "ReminderManager",
+                              code: 403,
+                              userInfo: [NSLocalizedDescriptionKey: "EventKit permission not granted"])
+            }
+        }
+        
         // Create a new reminder in EventKit
         let ekReminder = EKReminder(eventStore: eventStore)
         
@@ -234,8 +286,16 @@ class ReminderManager: ObservableObject {
         ekReminder.title = reminder.title
         ekReminder.notes = reminder.message
         
-        // Set calendar - use default reminder calendar
-        ekReminder.calendar = eventStore.defaultCalendarForNewReminders()
+        // Verify calendar is available
+        guard let calendar = eventStore.defaultCalendarForNewReminders() else {
+            print("❌ No default calendar available for reminders")
+            throw NSError(domain: "ReminderManager",
+                          code: 404,
+                          userInfo: [NSLocalizedDescriptionKey: "No default calendar available"])
+        }
+        
+        // Set calendar
+        ekReminder.calendar = calendar
         
         // Set due date
         let alarm = EKAlarm(absoluteDate: reminder.date)
@@ -250,10 +310,15 @@ class ReminderManager: ObservableObject {
         // Set priority
         ekReminder.priority = 1 // High priority
         
-        // Save the reminder
-        try eventStore.save(ekReminder, commit: true)
-        
-        return ekReminder.calendarItemIdentifier
+        do {
+            // Save the reminder
+            try eventStore.save(ekReminder, commit: true)
+            print("✅ Successfully saved EventKit reminder")
+            return ekReminder.calendarItemIdentifier
+        } catch {
+            print("❌ Failed to save reminder: \(error)")
+            throw error
+        }
     }
     
     private func updateEventKitReminder(eventId: String, isActive: Bool) async throws {

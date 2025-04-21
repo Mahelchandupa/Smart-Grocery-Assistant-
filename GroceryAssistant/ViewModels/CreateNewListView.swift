@@ -167,7 +167,7 @@ struct CreateNewListView: View {
             name: listName,
             color: selectedColor.toHex() ?? "#000000",
             dueDate: dueDate,
-            items: [],
+            totalItems: 0,
             completedItems: 0
         )
         
