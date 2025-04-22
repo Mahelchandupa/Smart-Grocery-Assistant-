@@ -4,6 +4,7 @@ import FirebaseFirestore
 struct HomeView: View {
     @EnvironmentObject var authManager: AuthManager
     @Binding var navPath: NavigationPath
+    @StateObject private var weatherManager = WeatherManager()
     
     @State private var lists: [ShoppingList] = []
     @State private var activeListCount = 0
@@ -28,7 +29,7 @@ struct HomeView: View {
                     
                     HStack(spacing: 16) {
                         Button(action: {
-                            // Handle notification tap
+                            navPath.append(Route.reminder)
                         }) {
                             Image(systemName: "bell.fill")
                                 .font(.system(size: 24))
@@ -62,14 +63,50 @@ struct HomeView: View {
                     VStack(spacing: 0) {
                         // Quick Actions
                         quickActionsSection()
-                            .padding(.top, 16)
                         
                         // Your Shopping Lists
                         shoppingListsSection()
+                            .padding(.top, 16)
                         
-                        // Suggestions
                         suggestionsSection()
-                            .padding(.bottom, 16)
+                            .padding(.top, 16)
+                        
+                        VStack(alignment: .leading, spacing: 20) {
+                                     // Header
+                                     Text("Weather Forecast")
+                                       .font(.system(size: 18, weight: .semibold))
+                                       .foregroundColor(Color(hex: "424242"))
+                                                                          
+                                     if weatherManager.isLoading {
+                                         HStack {
+                                             Spacer()
+                                             ProgressView()
+                                                 .progressViewStyle(CircularProgressViewStyle())
+                                                 .scaleEffect(1.5)
+                                                 .padding()
+                                             Spacer()
+                                         }
+                                     } else {
+                                         // Daily forecast cards - horizontal scroll
+                                         ScrollView(.horizontal, showsIndicators: false) {
+                                             HStack(spacing: 16) {
+                                                 ForEach(weatherManager.forecasts) { forecast in
+                                                     DayForecastCard(forecast: forecast)
+                                                 }
+                                             }
+                                             .padding(.horizontal, 16)
+                                             .padding(.bottom, 8)
+                                         }
+                                     }
+                                     
+                                     Spacer()
+                                 }
+                                 .padding()
+                        
+            
+                        // Suggestions
+//                        weatherForecastSection()
+//                            .padding(.bottom, 16)
                     }
                 }
             }
@@ -84,6 +121,88 @@ struct HomeView: View {
             await fetchLists()
         }
     }
+    
+    private func getWeatherIcon(for condition: String) -> String {
+          let condition = condition.lowercased()
+          
+          if condition.contains("clear") || condition.contains("sunny") {
+              return "sun.max.fill"
+          } else if condition.contains("cloud") {
+              return "cloud.fill"
+          } else if condition.contains("rain") || condition.contains("shower") {
+              return "cloud.rain.fill"
+          } else if condition.contains("snow") || condition.contains("sleet") {
+              return "cloud.snow.fill"
+          } else if condition.contains("thunder") || condition.contains("lightning") {
+              return "cloud.bolt.fill"
+          } else if condition.contains("fog") || condition.contains("mist") {
+              return "cloud.fog.fill"
+          } else {
+              return "questionmark.circle.fill"
+          }
+      }
+    
+    struct DayForecastCard: View {
+        let forecast: DayForecast
+        
+        var body: some View {
+            VStack(alignment: .center, spacing: 12) {
+                // Day name
+                Text(forecast.dayName)
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "424242"))
+                
+                // Weather icon
+                Image(systemName: forecast.conditionIcon)
+                    .font(.system(size: 24))
+                    .foregroundColor(Color(hex: "4CAF50"))
+                    .padding(.vertical, 8)
+                
+                // Temperature
+                Text(forecast.temperature)
+                    .font(.title2.bold())
+                    .foregroundColor(Color(hex: "4CAF50"))
+                
+                // High/Low
+                HStack(spacing: 8) {
+                    VStack(alignment: .center) {
+                        Text("High")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "757575"))
+                        Text(forecast.high)
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "FF5722"))
+                    }
+                    
+                    Rectangle()
+                        .frame(width: 1, height: 24)
+                        .foregroundColor(Color(hex: "E0E0E0"))
+                    
+                    VStack(alignment: .center) {
+                        Text("Low")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "757575"))
+                        Text(forecast.low)
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "4CAF50"))
+                    }
+                }
+                
+                // Condition
+                Text(forecast.condition)
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "616161"))
+                    .multilineTextAlignment(.center)
+                    .frame(height: 32)
+            }
+            .frame(width: 120, height: 200)
+            .padding()
+            .background(Color(hex: "F5F5F5"))
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        }
+    }
+
     
     // View Components
     private func quickActionsSection() -> some View {
@@ -108,12 +227,12 @@ struct HomeView: View {
                 Spacer()
                 
                 quickActionButton(
-                    icon: "list.bullet",
+                    icon: "cart.fill",
                     color: Color(hex: "2196F3"),
                     bgColor: Color(hex: "E3F2FD"),
-                    label: "Grocery Lists",
+                    label: "Buy Groceries",
                     action: {
-                        navPath.append(Route.lists)
+                        navPath.append(Route.buy)
                     }
                 )
                 
@@ -159,13 +278,27 @@ struct HomeView: View {
                 .foregroundColor(Color(hex: "424242"))
                 .padding(.horizontal, 16)
             
-            ForEach(lists) { list in
-                shoppingListItem(list)
-                    .padding(.horizontal, 16)
+            if lists.isEmpty {
+                // Placeholder when no lists are available
+                VStack {
+                    Text("No shopping lists yet")
+                        .foregroundColor(.gray)
+                        .padding()
+                }
+                .frame(minHeight: 80 - 30) // Subtract the header height and padding
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+            } else {
+                ForEach(lists) { list in
+                    shoppingListItem(list)
+                        .padding(.horizontal, 16)
+                }
             }
         }
+        .frame(minHeight: 80) // Set minimum height for the entire section
         .padding(.bottom, 16)
     }
+    
     
     private func suggestionsSection() -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -198,12 +331,39 @@ struct HomeView: View {
                 }
             }
             .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading) // Take full width
             .background(Color.white)
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
             .padding(.horizontal, 16)
         }
+        .padding(.bottom, 16)
     }
+    
+    private func formattedForecastDate(_ date: Date) -> String {
+        if Calendar.current.isDateInToday(date) {
+            return "Today"
+        } else if Calendar.current.isDateInTomorrow(date) {
+            return "Tomorrow"
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date) // "Mon", "Tue"
+    }
+
+    private func systemSymbol(for condition: String) -> String {
+        // Map WeatherKit symbols to SF Symbols (rough match)
+        switch condition {
+        case "cloud.sun": return "cloud.sun.fill"
+        case "cloud.rain": return "cloud.rain.fill"
+        case "sun.max": return "sun.max.fill"
+        case "cloud.bolt": return "cloud.bolt.fill"
+        case "cloud.snow": return "cloud.snow.fill"
+        default: return "cloud.fill"
+        }
+    }
+
     
     // Helper Views   
     private func quickActionButton(icon: String, color: Color, bgColor: Color, label: String, action: @escaping () -> Void) -> some View {
@@ -242,20 +402,19 @@ struct HomeView: View {
                     
                     HStack {
                         Text("\(list.completedItems)/\(list.totalItems) items")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color(hex: "757575"))
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "6B7280"))
                         
                         Spacer()
                         
-                        if list.dueDate != nil {
-                            Text("Due: \(list.dueDate != nil ? formattedDate(list.dueDate!) : "No due date")")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(Color(hex: "616161"))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
-                                .background(Color(hex: "F5F5F5"))
-                                .cornerRadius(16)
-                        }
+                        Text("Due: \(list.dueDate != nil ? formattedDate(list.dueDate!) : "No due date")")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(Color(hex: "6B7280"))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 4)
+                            .background(Color(hex: "F3F4F6"))
+                            .cornerRadius(16)
                     }
                     
                     // Progress bar
@@ -278,7 +437,7 @@ struct HomeView: View {
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
         }
-        .padding(.bottom, 16)
+//        .padding(.bottom, 16)
     }
     
     private func fetchLists() async {

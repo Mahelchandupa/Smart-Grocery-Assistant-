@@ -16,7 +16,7 @@ struct ListDetailView: View {
         VStack(spacing: 0) {
             // Header
             ZStack {
-                Color(hex: "16A34A")
+                Color(hex: "4CAF50")
                     .ignoresSafeArea(edges: .top)
                 
                 VStack(spacing: 4) {

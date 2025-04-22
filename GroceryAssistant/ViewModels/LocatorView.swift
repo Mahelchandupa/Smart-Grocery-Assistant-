@@ -2,6 +2,12 @@
 //import MapKit
 //import CoreLocation
 //
+//// MARK: - Extensions
+//extension Double {
+//    var degreesToRadians: Double { return self * .pi / 180 }
+//    var radiansToDegrees: Double { return self * 180 / .pi }
+//}
+//
 //// MARK: - Models
 //struct Store: Identifiable {
 //    let id = UUID()
@@ -29,12 +35,32 @@
 //    // Sri Lanka coordinates (approximate center)
 //    private let sriLankaCenter = CLLocationCoordinate2D(latitude: 7.8731, longitude: 80.7718)
 //    
+//    // Popular supermarket chains in Sri Lanka
+//    private let sriLankaStores = [
+//        "Keells Super", "Cargills Food City", "Arpico Super Centre",
+//        "Laugfs Supermarket", "Sathosa", "Glories", "Preethis",
+//        "Softlogic GLOMARK", "Lanka Sathosa"
+//    ]
+//    
 //    override init() {
 //        super.init()
 //        locationManager.delegate = self
 //        locationManager.desiredAccuracy = kCLLocationAccuracyBest
 //        locationManager.requestWhenInUseAuthorization()
 //        locationManager.startUpdatingLocation()
+//        
+//        // If location services are unavailable or delayed, start with fallback data
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+//            guard let self = self else { return }
+//            
+//            if self.stores.isEmpty && !self.hasFetchedStores {
+//                print("No location update received, using fallback data")
+//                self.updateRegion(to: self.sriLankaCenter)
+//                self.createFallbackStores(near: CLLocation(latitude: self.sriLankaCenter.latitude,
+//                                                         longitude: self.sriLankaCenter.longitude))
+//                self.hasFetchedStores = true
+//            }
+//        }
 //    }
 //
 //    private var hasFetchedStores = false
@@ -67,8 +93,9 @@
 //    
 //    // Check if coordinates are in Sri Lanka (rough bounding box)
 //    private func isLocationInSriLanka(_ coordinate: CLLocationCoordinate2D) -> Bool {
-//        return coordinate.latitude >= 5.9 && coordinate.latitude <= 9.9 &&
-//               coordinate.longitude >= 79.5 && coordinate.longitude <= 82.0
+//        // More generous bounding box for Sri Lanka that includes surrounding waters
+//        return coordinate.latitude >= 5.5 && coordinate.latitude <= 10.0 &&
+//               coordinate.longitude >= 79.0 && coordinate.longitude <= 82.5
 //    }
 //
 //    private func updateRegion(to coordinate: CLLocationCoordinate2D) {
@@ -83,30 +110,31 @@
 //        errorMessage = nil
 //        
 //        let request = MKLocalSearch.Request()
-//        // Focus on supermarkets in Sri Lanka
-//        request.naturalLanguageQuery = "supermarket OR grocery store"
+//        // Focus on supermarkets in Sri Lanka - use more specific query terms
+//        request.naturalLanguageQuery = "supermarket Sri Lanka"
 //        
-//        // Set a larger region to capture Sri Lanka supermarkets
+//        // Set a more reasonable region for Sri Lanka search
+//        // Using a larger span to cover more area
 //        let searchRegion = MKCoordinateRegion(
-//            center: location.coordinate,
-//            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
+//            center: sriLankaCenter,  // Use Sri Lanka center instead of user location
+//            span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
 //        )
 //        request.region = searchRegion
 //        
-//        // Add Sri Lanka region bias
-//        request.region = MKCoordinateRegion(
-//            center: location.coordinate,
-//            latitudinalMeters: 20000,  // 20km radius
-//            longitudinalMeters: 20000
-//        )
-//
-//        let search = MKLocalSearch(request: request)
-//        search.start { response, error in
+//        // Add a delay to prevent throttling if we've searched recently
+//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//            let search = MKLocalSearch(request: request)
+//            search.start { response, error in
 //            DispatchQueue.main.async {
 //                self.isLoading = false
 //                
 //                if let error = error {
 //                    self.errorMessage = "Error finding supermarkets: \(error.localizedDescription)"
+//                    // If we get a throttling error, use fallback data
+//                    if (error as NSError).domain == MKErrorDomain && (error as NSError).code == 4 {
+//                        self.createFallbackStores(near: location)
+//                        return
+//                    }
 //                    return
 //                }
 //                
@@ -140,10 +168,77 @@
 //                .sorted { $0.rating > $1.rating }
 //                
 //                if self.stores.isEmpty {
-//                    self.errorMessage = "No supermarkets found in Sri Lanka nearby. Try adjusting your location."
+//                    // If no stores found, use fallback data
+//                    self.createFallbackStores(near: location)
 //                }
 //            }
 //        }
+//    }
+//    }
+//    
+//    // Create fallback store data for Sri Lanka when MapKit search fails
+//    private func createFallbackStores(near location: CLLocation) {
+//        // Clear any existing error message
+//        self.errorMessage = nil
+//        
+//        // Create some hardcoded stores around Sri Lanka's main cities
+//        var fallbackStores: [Store] = []
+//        
+//        // Colombo supermarkets
+//        fallbackStores.append(Store(
+//            name: "Keells Super - Colombo",
+//            coordinates: CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612),
+//            address: "Union Place, Colombo 2, Sri Lanka",
+//            rating: 4.7,
+//            distance: location.distance(from: CLLocation(latitude: 6.9271, longitude: 79.8612)) / 1000
+//        ))
+//        
+//        fallbackStores.append(Store(
+//            name: "Cargills Food City - Colombo",
+//            coordinates: CLLocationCoordinate2D(latitude: 6.9344, longitude: 79.8500),
+//            address: "Staples Street, Colombo, Sri Lanka",
+//            rating: 4.5,
+//            distance: location.distance(from: CLLocation(latitude: 6.9344, longitude: 79.8500)) / 1000
+//        ))
+//        
+//        // Kandy supermarkets
+//        fallbackStores.append(Store(
+//            name: "Arpico Super Centre - Kandy",
+//            coordinates: CLLocationCoordinate2D(latitude: 7.2906, longitude: 80.6337),
+//            address: "Peradeniya Road, Kandy, Sri Lanka",
+//            rating: 4.6,
+//            distance: location.distance(from: CLLocation(latitude: 7.2906, longitude: 80.6337)) / 1000
+//        ))
+//        
+//        // Galle supermarkets
+//        fallbackStores.append(Store(
+//            name: "Lanka Sathosa - Galle",
+//            coordinates: CLLocationCoordinate2D(latitude: 6.0535, longitude: 80.2210),
+//            address: "Main Street, Galle, Sri Lanka",
+//            rating: 4.2,
+//            distance: location.distance(from: CLLocation(latitude: 6.0535, longitude: 80.2210)) / 1000
+//        ))
+//        
+//        // Negombo supermarkets
+//        fallbackStores.append(Store(
+//            name: "Softlogic GLOMARK - Negombo",
+//            coordinates: CLLocationCoordinate2D(latitude: 7.2081, longitude: 79.8371),
+//            address: "Colombo Road, Negombo, Sri Lanka",
+//            rating: 4.4,
+//            distance: location.distance(from: CLLocation(latitude: 7.2081, longitude: 79.8371)) / 1000
+//        ))
+//        
+//        // Jaffna supermarkets
+//        fallbackStores.append(Store(
+//            name: "Cargills Food City - Jaffna",
+//            coordinates: CLLocationCoordinate2D(latitude: 9.6615, longitude: 80.0255),
+//            address: "Hospital Road, Jaffna, Sri Lanka",
+//            rating: 4.3,
+//            distance: location.distance(from: CLLocation(latitude: 9.6615, longitude: 80.0255)) / 1000
+//        ))
+//        
+//        // Sort by rating
+//        self.stores = fallbackStores.sorted { $0.rating > $1.rating }
 //    }
 //    
 //    // Format address specifically for Sri Lanka format
@@ -186,6 +281,13 @@
 //        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: store.coordinates))
 //        request.transportType = .automobile
 //        
+//        // First check if we're trying to use actual directions
+//        if !isLocationInSriLanka(userLocation) {
+//            // If user is not in Sri Lanka, use fallback directions
+//            createFallbackDirections(to: store)
+//            return
+//        }
+//        
 //        let directions = MKDirections(request: request)
 //        directions.calculate { [weak self] response, error in
 //            guard let self = self else { return }
@@ -210,16 +312,62 @@
 //                }
 //                
 //                if self.directions.isEmpty {
-//                    self.directions = [
-//                        "Start from your location.",
-//                        "Head to \(store.name)",
-//                        "Arrive at destination."
-//                    ]
+//                    self.createFallbackDirections(to: store)
+//                    return
 //                }
 //                
 //                self.showingDirections = true
 //            }
 //        }
+//    }
+//    
+//    // Create fallback directions when MapKit directions fail
+//    private func createFallbackDirections(to store: Store) {
+//        guard let userLocation = self.userLocation else {
+//            return
+//        }
+//        
+//        // Calculate distance
+//        let fromLocation = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
+//        let toLocation = CLLocation(latitude: store.coordinates.latitude, longitude: store.coordinates.longitude)
+//        let distanceInKm = fromLocation.distance(from: toLocation) / 1000
+//        
+//        // Create generic directions based on cardinal direction
+//        let bearing = calculateBearing(from: fromLocation, to: toLocation)
+//        let cardinalDirection = getCardinalDirection(for: bearing)
+//        
+//        self.directions = [
+//            "Start from your current location.",
+//            "Head \(cardinalDirection) for approximately \(String(format: "%.1f", distanceInKm)) km.",
+//            "Continue on main roads toward \(store.name).",
+//            "Look for \(store.name) on your \(Bool.random() ? "right" : "left") side.",
+//            "Arrive at \(store.name), \(store.address)."
+//        ]
+//        
+//        self.isLoading = false
+//        self.showingDirections = true
+//    }
+//    
+//    // Calculate bearing between two locations
+//    private func calculateBearing(from startLocation: CLLocation, to endLocation: CLLocation) -> Double {
+//        let lat1 = startLocation.coordinate.latitude.degreesToRadians
+//        let lon1 = startLocation.coordinate.longitude.degreesToRadians
+//        let lat2 = endLocation.coordinate.latitude.degreesToRadians
+//        let lon2 = endLocation.coordinate.longitude.degreesToRadians
+//        
+//        let dLon = lon2 - lon1
+//        let y = sin(dLon) * cos(lat2)
+//        let x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon)
+//        let bearing = atan2(y, x).radiansToDegrees
+//        
+//        return (bearing + 360).truncatingRemainder(dividingBy: 360)
+//    }
+//    
+//    // Convert bearing to cardinal direction
+//    private func getCardinalDirection(for bearing: Double) -> String {
+//        let directions = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"]
+//        let index = Int(round(bearing / 45.0)) % 8
+//        return directions[index]
 //    }
 //    
 //    private func formatDistance(meters: CLLocationDistance) -> String {
@@ -257,7 +405,7 @@
 //                            .foregroundColor(.white)
 //                    }
 //                    Spacer()
-//                    Text("Sri Lanka Supermarkets")
+//                    Text("Discover")
 //                        .foregroundColor(.white)
 //                        .bold()
 //                    Spacer()
@@ -354,30 +502,6 @@
 //                    }.padding()
 //                }
 //            }
-//
-//            HStack {
-//                TabBarItem(imageName: "leaf", text: "Nutritional")
-//                TabBarItem(imageName: "mappin.and.ellipse", text: "Find Store", isSelected: true)
-//
-//                ZStack {
-//                    Circle()
-//                        .fill(Color.white)
-//                        .frame(width: 60, height: 60)
-//                        .shadow(radius: 2)
-//                    Button(action: {}) {
-//                        Image(systemName: "house.fill")
-//                            .font(.system(size: 24))
-//                            .foregroundColor(.green)
-//                    }
-//                }
-//                .offset(y: -20)
-//
-//                TabBarItem(imageName: "list.bullet", text: "Item Lists")
-//                TabBarItem(imageName: "bell", text: "Reminder")
-//            }
-//            .frame(height: 60)
-//            .background(Color.white)
-//            .shadow(radius: 5)
 //        }
 //        .sheet(isPresented: $viewModel.showingDirections) {
 //            if let store = viewModel.selectedStore {
@@ -476,25 +600,6 @@
 //        .background(Color.white)
 //        .cornerRadius(12)
 //        .shadow(color: Color.black.opacity(0.05), radius: 4)
-//    }
-//}
-//
-//struct TabBarItem: View {
-//    let imageName: String
-//    let text: String
-//    var isSelected: Bool = false
-//
-//    var body: some View {
-//        Button(action: {}) {
-//            VStack {
-//                Image(systemName: imageName)
-//                    .foregroundColor(isSelected ? .green : .gray)
-//                Text(text)
-//                    .font(.caption)
-//                    .foregroundColor(isSelected ? .green : .gray)
-//            }
-//        }
-//        .frame(maxWidth: .infinity)
 //    }
 //}
 //
@@ -597,7 +702,6 @@
 //    }
 //}
 
-
 import SwiftUI
 import MapKit
 import CoreLocation
@@ -616,6 +720,13 @@ struct Store: Identifiable {
     let address: String
     let rating: Double
     let distance: Double
+    let type: StoreType // Added store type
+}
+
+enum StoreType: String {
+    case supermarket = "Supermarket"
+    case groceryStore = "Grocery Store"
+    case convenience = "Convenience Store"
 }
 
 // MARK: - ViewModel
@@ -628,6 +739,7 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var showingDirections = false
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var mapCenterLocation: CLLocationCoordinate2D? // Added for map center tracking
     
     private var locationManager = CLLocationManager()
     private let geocoder = CLGeocoder()
@@ -656,6 +768,7 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             if self.stores.isEmpty && !self.hasFetchedStores {
                 print("No location update received, using fallback data")
                 self.updateRegion(to: self.sriLankaCenter)
+                self.mapCenterLocation = self.sriLankaCenter
                 self.createFallbackStores(near: CLLocation(latitude: self.sriLankaCenter.latitude,
                                                          longitude: self.sriLankaCenter.longitude))
                 self.hasFetchedStores = true
@@ -675,10 +788,11 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         let locationToUse = userInSriLanka ? location.coordinate : sriLankaCenter
         
         updateRegion(to: locationToUse)
+        mapCenterLocation = locationToUse
 
         if !hasFetchedStores {
             hasFetchedStores = true
-            fetchStores(near: CLLocation(latitude: locationToUse.latitude, longitude: locationToUse.longitude))
+            fetchNearbyStores(near: CLLocation(latitude: locationToUse.latitude, longitude: locationToUse.longitude))
         }
     }
     
@@ -688,7 +802,8 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         // Use Sri Lanka center coordinates if location fails
         updateRegion(to: sriLankaCenter)
-        fetchStores(near: CLLocation(latitude: sriLankaCenter.latitude, longitude: sriLankaCenter.longitude))
+        mapCenterLocation = sriLankaCenter
+        fetchNearbyStores(near: CLLocation(latitude: sriLankaCenter.latitude, longitude: sriLankaCenter.longitude))
     }
     
     // Check if coordinates are in Sri Lanka (rough bounding box)
@@ -705,78 +820,118 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         )
     }
 
-    func fetchStores(near location: CLLocation) {
+    // Updated to fetch both supermarkets and grocery stores
+    func fetchNearbyStores(near location: CLLocation) {
         isLoading = true
         errorMessage = nil
         
-        let request = MKLocalSearch.Request()
-        // Focus on supermarkets in Sri Lanka - use more specific query terms
-        request.naturalLanguageQuery = "supermarket Sri Lanka"
+        // Create two separate requests - one for supermarkets and one for grocery stores
+        let supermarketRequest = MKLocalSearch.Request()
+        supermarketRequest.naturalLanguageQuery = "supermarket"
         
-        // Set a more reasonable region for Sri Lanka search
-        // Using a larger span to cover more area
+        let groceryRequest = MKLocalSearch.Request()
+        groceryRequest.naturalLanguageQuery = "grocery store"
+        
+        // Set region for both searches
         let searchRegion = MKCoordinateRegion(
-            center: sriLankaCenter,  // Use Sri Lanka center instead of user location
-            span: MKCoordinateSpan(latitudeDelta: 0.5, longitudeDelta: 0.5)
+            center: mapCenterLocation ?? sriLankaCenter,
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1) // Smaller span to focus on nearby locations
         )
-        request.region = searchRegion
+        supermarketRequest.region = searchRegion
+        groceryRequest.region = searchRegion
         
-        // Add a delay to prevent throttling if we've searched recently
+        // Perform both searches
+        let group = DispatchGroup()
+        var allStores: [Store] = []
+        var searchError: Error?
+        
+        // Add delay to prevent throttling
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let search = MKLocalSearch(request: request)
-            search.start { response, error in
-            DispatchQueue.main.async {
-                self.isLoading = false
+            // Search for supermarkets
+            group.enter()
+            let supermarketSearch = MKLocalSearch(request: supermarketRequest)
+            supermarketSearch.start { response, error in
+                defer { group.leave() }
                 
                 if let error = error {
-                    self.errorMessage = "Error finding supermarkets: \(error.localizedDescription)"
-                    // If we get a throttling error, use fallback data
-                    if (error as NSError).domain == MKErrorDomain && (error as NSError).code == 4 {
-                        self.createFallbackStores(near: location)
-                        return
-                    }
+                    searchError = error
                     return
                 }
                 
-                guard let mapItems = response?.mapItems, !mapItems.isEmpty else {
-                    self.errorMessage = "No supermarkets found nearby. Try adjusting your location."
+                if let items = response?.mapItems {
+                    let supermarkets = self.processMapItems(items, type: .supermarket, near: location)
+                    allStores.append(contentsOf: supermarkets)
+                }
+            }
+            
+            // Search for grocery stores
+            group.enter()
+            let grocerySearch = MKLocalSearch(request: groceryRequest)
+            grocerySearch.start { response, error in
+                defer { group.leave() }
+                
+                if let error = error {
+                    searchError = error
                     return
                 }
-
-                self.stores = mapItems.compactMap { item in
-                    guard let name = item.name,
-                          let coordinate = item.placemark.location?.coordinate else { return nil }
-
-                    // Filter to only include locations in Sri Lanka
-                    if !self.isLocationInSriLanka(coordinate) {
-                        return nil
-                    }
-                    
-                    let address = self.formatAddress(from: item.placemark)
-                    let distance = location.distance(from: item.placemark.location!) / 1000 // km
-                    
-                    // In real app, you would fetch real ratings from a database
-                    // Using random for demo purposes
-                    let randomRating = Double.random(in: 3.5...5.0)
-
-                    return Store(name: name,
-                                 coordinates: coordinate,
-                                 address: address,
-                                 rating: randomRating,
-                                 distance: distance)
-                }
-                .sorted { $0.rating > $1.rating }
                 
-                if self.stores.isEmpty {
-                    // If no stores found, use fallback data
+                if let items = response?.mapItems {
+                    let groceries = self.processMapItems(items, type: .groceryStore, near: location)
+                    allStores.append(contentsOf: groceries)
+                }
+            }
+            
+            // Process results
+            group.notify(queue: .main) {
+                self.isLoading = false
+                
+                if let error = searchError {
+                    self.errorMessage = "Error finding stores: \(error.localizedDescription)"
+                    // If search failed, use fallback data
                     self.createFallbackStores(near: location)
+                    return
+                }
+                
+                if allStores.isEmpty {
+                    self.errorMessage = "No stores found nearby. Try adjusting the map view."
+                    self.createFallbackStores(near: location)
+                    return
+                }
+                
+                // Sort by rating and then by distance
+                self.stores = allStores.sorted {
+                    if $0.rating == $1.rating {
+                        return $0.distance < $1.distance
+                    }
+                    return $0.rating > $1.rating
                 }
             }
         }
     }
+    
+    // Helper method to process map items
+    private func processMapItems(_ items: [MKMapItem], type: StoreType, near location: CLLocation) -> [Store] {
+        return items.compactMap { item in
+            guard let name = item.name,
+                  let coordinate = item.placemark.location?.coordinate else { return nil }
+            
+            // Don't filter by Sri Lanka location - allow viewing stores wherever map is centered
+            let address = self.formatAddress(from: item.placemark)
+            let distance = location.distance(from: item.placemark.location!) / 1000 // km
+            
+            // Using random for demo purposes
+            let randomRating = Double.random(in: 3.5...5.0)
+            
+            return Store(name: name,
+                         coordinates: coordinate,
+                         address: address,
+                         rating: randomRating,
+                         distance: distance,
+                         type: type)
+        }
     }
     
-    // Create fallback store data for Sri Lanka when MapKit search fails
+    // Create fallback store data when MapKit search fails
     private func createFallbackStores(near location: CLLocation) {
         // Clear any existing error message
         self.errorMessage = nil
@@ -790,7 +945,8 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             coordinates: CLLocationCoordinate2D(latitude: 6.9271, longitude: 79.8612),
             address: "Union Place, Colombo 2, Sri Lanka",
             rating: 4.7,
-            distance: location.distance(from: CLLocation(latitude: 6.9271, longitude: 79.8612)) / 1000
+            distance: location.distance(from: CLLocation(latitude: 6.9271, longitude: 79.8612)) / 1000,
+            type: .supermarket
         ))
         
         fallbackStores.append(Store(
@@ -798,7 +954,8 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             coordinates: CLLocationCoordinate2D(latitude: 6.9344, longitude: 79.8500),
             address: "Staples Street, Colombo, Sri Lanka",
             rating: 4.5,
-            distance: location.distance(from: CLLocation(latitude: 6.9344, longitude: 79.8500)) / 1000
+            distance: location.distance(from: CLLocation(latitude: 6.9344, longitude: 79.8500)) / 1000,
+            type: .supermarket
         ))
         
         // Kandy supermarkets
@@ -807,34 +964,47 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             coordinates: CLLocationCoordinate2D(latitude: 7.2906, longitude: 80.6337),
             address: "Peradeniya Road, Kandy, Sri Lanka",
             rating: 4.6,
-            distance: location.distance(from: CLLocation(latitude: 7.2906, longitude: 80.6337)) / 1000
+            distance: location.distance(from: CLLocation(latitude: 7.2906, longitude: 80.6337)) / 1000,
+            type: .supermarket
         ))
         
-        // Galle supermarkets
+        // Galle grocery stores
         fallbackStores.append(Store(
-            name: "Lanka Sathosa - Galle",
+            name: "Local Grocery - Galle",
             coordinates: CLLocationCoordinate2D(latitude: 6.0535, longitude: 80.2210),
             address: "Main Street, Galle, Sri Lanka",
             rating: 4.2,
-            distance: location.distance(from: CLLocation(latitude: 6.0535, longitude: 80.2210)) / 1000
+            distance: location.distance(from: CLLocation(latitude: 6.0535, longitude: 80.2210)) / 1000,
+            type: .groceryStore
         ))
         
-        // Negombo supermarkets
+        // Negombo grocery stores
         fallbackStores.append(Store(
-            name: "Softlogic GLOMARK - Negombo",
+            name: "Fresh Market - Negombo",
             coordinates: CLLocationCoordinate2D(latitude: 7.2081, longitude: 79.8371),
             address: "Colombo Road, Negombo, Sri Lanka",
             rating: 4.4,
-            distance: location.distance(from: CLLocation(latitude: 7.2081, longitude: 79.8371)) / 1000
+            distance: location.distance(from: CLLocation(latitude: 7.2081, longitude: 79.8371)) / 1000,
+            type: .groceryStore
         ))
         
-        // Jaffna supermarkets
+        // Jaffna stores
         fallbackStores.append(Store(
             name: "Cargills Food City - Jaffna",
             coordinates: CLLocationCoordinate2D(latitude: 9.6615, longitude: 80.0255),
             address: "Hospital Road, Jaffna, Sri Lanka",
             rating: 4.3,
-            distance: location.distance(from: CLLocation(latitude: 9.6615, longitude: 80.0255)) / 1000
+            distance: location.distance(from: CLLocation(latitude: 9.6615, longitude: 80.0255)) / 1000,
+            type: .supermarket
+        ))
+        
+        fallbackStores.append(Store(
+            name: "Family Mart - Jaffna",
+            coordinates: CLLocationCoordinate2D(latitude: 9.6550, longitude: 80.0290),
+            address: "Temple Road, Jaffna, Sri Lanka",
+            rating: 4.1,
+            distance: location.distance(from: CLLocation(latitude: 9.6550, longitude: 80.0290)) / 1000,
+            type: .convenience
         ))
         
         // Sort by rating
@@ -861,8 +1031,13 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
             components.append(administrativeArea)
         }
         
-        // Always add "Sri Lanka" for clarity
-        components.append("Sri Lanka")
+        // Add country for clarity
+        if let country = placemark.country {
+            components.append(country)
+        } else {
+            // Default to Sri Lanka for fallback data
+            components.append("Sri Lanka")
+        }
         
         return components.joined(separator: ", ")
     }
@@ -881,13 +1056,6 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         request.destination = MKMapItem(placemark: MKPlacemark(coordinate: store.coordinates))
         request.transportType = .automobile
         
-        // First check if we're trying to use actual directions
-        if !isLocationInSriLanka(userLocation) {
-            // If user is not in Sri Lanka, use fallback directions
-            createFallbackDirections(to: store)
-            return
-        }
-        
         let directions = MKDirections(request: request)
         directions.calculate { [weak self] response, error in
             guard let self = self else { return }
@@ -897,11 +1065,13 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
                 
                 if let error = error {
                     self.errorMessage = "Error getting directions: \(error.localizedDescription)"
+                    self.createFallbackDirections(to: store)
                     return
                 }
                 
                 guard let route = response?.routes.first else {
-                    self.errorMessage = "No route found to this supermarket"
+                    self.errorMessage = "No route found to this store"
+                    self.createFallbackDirections(to: store)
                     return
                 }
                 
@@ -978,14 +1148,19 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
     }
     
-    // Refresh supermarkets data
+    // Refresh stores data based on current map center
     func refreshStores() {
-        guard let userLocation = userLocation else {
-            errorMessage = "Unable to get your location"
-            return
-        }
+        let locationToSearch = mapCenterLocation ?? (userLocation ?? sriLankaCenter)
+        fetchNearbyStores(near: CLLocation(latitude: locationToSearch.latitude, longitude: locationToSearch.longitude))
+    }
+    
+    // New function to update stores when map is moved
+    func mapRegionDidChange() {
+        // Update the map center location
+        mapCenterLocation = region.center
         
-        fetchStores(near: CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude))
+        // Uncomment the following line if you want to automatically fetch new stores when map moves
+        // fetchNearbyStores(near: CLLocation(latitude: region.center.latitude, longitude: region.center.longitude))
     }
 }
 
@@ -1005,7 +1180,7 @@ struct LocatorView: View {
                             .foregroundColor(.white)
                     }
                     Spacer()
-                    Text("Sri Lanka Supermarkets")
+                    Text("Find Stores")
                         .foregroundColor(.white)
                         .bold()
                     Spacer()
@@ -1019,14 +1194,14 @@ struct LocatorView: View {
             }.frame(height: 44)
 
             ZStack {
-                Map(coordinateRegion: $viewModel.region, showsUserLocation: true, annotationItems: viewModel.stores) { store in
+                Map(coordinateRegion: $viewModel.region, annotationItems: viewModel.stores) { store in
                     MapAnnotation(coordinate: store.coordinates) {
                         ZStack {
                             Circle()
-                                .fill(Color.green)
+                                .fill(storeColor(for: store.type))
                                 .frame(width: 32, height: 32)
                                 .overlay(
-                                    Image(systemName: "cart")
+                                    Image(systemName: storeIcon(for: store.type))
                                         .foregroundColor(.white)
                                 )
                                 .shadow(radius: 2)
@@ -1045,7 +1220,41 @@ struct LocatorView: View {
                         }
                     }
                 }
-                .frame(height: 250)
+                .frame(height: 300)
+                .onAppear {
+                    // Disable showing user location blue dot
+                    // This is handled by the initial map center
+                }
+                // Use MapReader instead of onChange for detecting map movements
+                .onAppear {
+                    // Set up a timer to periodically check if map has moved
+                    Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+                        viewModel.mapRegionDidChange()
+                    }
+                }
+                
+                // Search button overlay
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            viewModel.refreshStores()
+                        }) {
+                            Text("Find Stores Here")
+                                .font(.system(size: 14, weight: .medium))
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.green)
+                                .foregroundColor(.white)
+                                .cornerRadius(20)
+                                .shadow(radius: 3)
+                        }
+                        .padding(.bottom, 10)
+                        .padding(.trailing, 10)
+                        Spacer()
+                    }
+                }
                 
                 if viewModel.isLoading {
                     ProgressView()
@@ -1067,6 +1276,21 @@ struct LocatorView: View {
                 }
             }
 
+            // Store type legend
+            HStack(spacing: 12) {
+                ForEach([StoreType.supermarket, .groceryStore, .convenience], id: \.self) { type in
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(storeColor(for: type))
+                            .frame(width: 12, height: 12)
+                        Text(type.rawValue)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(.vertical, 6)
+            
             ScrollView {
                 if viewModel.stores.isEmpty && !viewModel.isLoading {
                     VStack(spacing: 10) {
@@ -1074,10 +1298,10 @@ struct LocatorView: View {
                             .font(.system(size: 48))
                             .foregroundColor(.gray)
                         
-                        Text("No supermarkets found")
+                        Text("No stores found")
                             .font(.headline)
                         
-                        Text("Try adjusting your location or search parameters")
+                        Text("Move the map to a different area and tap 'Find Stores Here'")
                             .font(.caption)
                             .foregroundColor(.gray)
                             .multilineTextAlignment(.center)
@@ -1102,30 +1326,6 @@ struct LocatorView: View {
                     }.padding()
                 }
             }
-
-            HStack {
-                TabBarItem(imageName: "leaf", text: "Nutritional")
-                TabBarItem(imageName: "mappin.and.ellipse", text: "Find Store", isSelected: true)
-
-                ZStack {
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 60, height: 60)
-                        .shadow(radius: 2)
-                    Button(action: {}) {
-                        Image(systemName: "house.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.green)
-                    }
-                }
-                .offset(y: -20)
-
-                TabBarItem(imageName: "list.bullet", text: "Item Lists")
-                TabBarItem(imageName: "bell", text: "Reminder")
-            }
-            .frame(height: 60)
-            .background(Color.white)
-            .shadow(radius: 5)
         }
         .sheet(isPresented: $viewModel.showingDirections) {
             if let store = viewModel.selectedStore {
@@ -1142,6 +1342,29 @@ struct LocatorView: View {
             set: { _ in viewModel.errorMessage = nil }
         )) { alert in
             Alert(title: Text("Error"), message: Text(alert.message), dismissButton: .default(Text("OK")))
+        }
+    }
+    
+    // Helper functions for store type visual indicators
+    func storeColor(for type: StoreType) -> Color {
+        switch type {
+        case .supermarket:
+            return Color.green
+        case .groceryStore:
+            return Color.blue
+        case .convenience:
+            return Color.orange
+        }
+    }
+    
+    func storeIcon(for type: StoreType) -> String {
+        switch type {
+        case .supermarket:
+            return "cart.fill"
+        case .groceryStore:
+            return "bag.fill"
+        case .convenience:
+            return "house.fill"
         }
     }
 }
@@ -1163,8 +1386,18 @@ struct StoreRow: View {
         VStack(alignment: .leading) {
             HStack {
                 VStack(alignment: .leading) {
-                    Text(store.name)
-                        .font(.headline)
+                    HStack {
+                        Text(store.name)
+                            .font(.headline)
+                        
+                        Text(store.type.rawValue)
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(typeColor(for: store.type).opacity(0.2))
+                            .foregroundColor(typeColor(for: store.type))
+                            .cornerRadius(4)
+                    }
                     
                     Text(store.address)
                         .font(.caption)
@@ -1214,7 +1447,7 @@ struct StoreRow: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(Color.green)
+                    .background(typeColor(for: store.type))
                     .foregroundColor(.white)
                     .cornerRadius(20)
                 }
@@ -1225,24 +1458,17 @@ struct StoreRow: View {
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 4)
     }
-}
-
-struct TabBarItem: View {
-    let imageName: String
-    let text: String
-    var isSelected: Bool = false
-
-    var body: some View {
-        Button(action: {}) {
-            VStack {
-                Image(systemName: imageName)
-                    .foregroundColor(isSelected ? .green : .gray)
-                Text(text)
-                    .font(.caption)
-                    .foregroundColor(isSelected ? .green : .gray)
-            }
+    
+    // Helper for type color
+    func typeColor(for type: StoreType) -> Color {
+        switch type {
+        case .supermarket:
+            return Color.green
+        case .groceryStore:
+            return Color.blue
+        case .convenience:
+            return Color.orange
         }
-        .frame(maxWidth: .infinity)
     }
 }
 
@@ -1255,18 +1481,18 @@ struct DirectionsView: View {
         NavigationView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack {
-                    Image(systemName: "cart.fill")
-                        .foregroundColor(.green)
+                    Image(systemName: typeIcon(for: store.type))
+                        .foregroundColor(typeColor(for: store.type))
                         .font(.system(size: 24))
                         .frame(width: 40, height: 40)
-                        .background(Color.green.opacity(0.2))
+                        .background(typeColor(for: store.type).opacity(0.2))
                         .cornerRadius(20)
                     
                     VStack(alignment: .leading) {
                         Text(store.name)
                             .font(.headline)
                         
-                        Text("\(store.distance, specifier: "%.1f") km | Rating: \(store.rating, specifier: "%.1f")")
+                        Text("\(store.distance, specifier: "%.1f") km | Rating: \(store.rating, specifier: "%.1f") | \(store.type.rawValue)")
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
@@ -1290,7 +1516,7 @@ struct DirectionsView: View {
                             HStack(alignment: .top) {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.green)
+                                        .fill(typeColor(for: store.type))
                                         .frame(width: 24, height: 24)
                                     
                                     Text("\(index + 1)")
@@ -1305,7 +1531,7 @@ struct DirectionsView: View {
                             
                             if index < directions.count - 1 {
                                 Rectangle()
-                                    .fill(Color.green.opacity(0.3))
+                                    .fill(typeColor(for: store.type).opacity(0.3))
                                     .frame(width: 2, height: 20)
                                     .padding(.leading, 11)
                             }
@@ -1322,7 +1548,7 @@ struct DirectionsView: View {
                     Text("Close Directions")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.green)
+                        .background(typeColor(for: store.type))
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 }
@@ -1333,6 +1559,30 @@ struct DirectionsView: View {
             .navigationBarItems(trailing: Button("Done") {
                 presentationMode.wrappedValue.dismiss()
             })
+        }
+    }
+    
+    // Helper for type color
+    func typeColor(for type: StoreType) -> Color {
+        switch type {
+        case .supermarket:
+            return Color.green
+        case .groceryStore:
+            return Color.blue
+        case .convenience:
+            return Color.orange
+        }
+    }
+    
+    // Helper for type icon
+    func typeIcon(for type: StoreType) -> String {
+        switch type {
+        case .supermarket:
+            return "cart.fill"
+        case .groceryStore:
+            return "bag.fill"
+        case .convenience:
+            return "house.fill"
         }
     }
 }

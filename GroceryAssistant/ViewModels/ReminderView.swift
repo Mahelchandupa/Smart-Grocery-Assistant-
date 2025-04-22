@@ -7,12 +7,25 @@ struct ReminderView: View {
     @StateObject private var reminderManager = ReminderManager()
     @State private var showNewReminderSheet = false
     @State private var newReminderType: ReminderType = .list
-    @Environment(\.dismiss) private var dismiss 
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedMonth: Date = Date()
+    @State private var selectedDate: Date = Date()
     
     var body: some View {
-        VStack(spacing: 0) {
-                // Header
+        ZStack(alignment: .top) {
+            Color.white.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Header (fixed at top)
                 headerView
+                
+                // Calendar View
+                CalendarMonthView(
+                    selectedMonth: $selectedMonth,
+                    selectedDate: $selectedDate,
+                    reminders: reminderManager.reminders
+                )
+                .padding(.horizontal)
                 
                 // Main Content
                 if reminderManager.isLoading {
@@ -26,16 +39,17 @@ struct ReminderView: View {
                     reminderListView
                 }
             }
-            .onAppear {
-                reminderManager.requestAccess { granted in
-                    if granted {
-                        Task {
-                            await reminderManager.fetchReminders(userId: authManager.currentFirebaseUser?.uid)
-                        }
+            .ignoresSafeArea(edges: .top)
+        }
+        .onAppear {
+            reminderManager.requestAccess { granted in
+                if granted {
+                    Task {
+                        await reminderManager.fetchReminders(userId: authManager.currentFirebaseUser?.uid)
                     }
                 }
+            }
         }
-        
         .sheet(isPresented: $showNewReminderSheet) {
             NewReminderSheet(
                 isPresented: $showNewReminderSheet,
@@ -50,53 +64,55 @@ struct ReminderView: View {
                 }
             )
         }
+        .navigationBarHidden(true)
     }
     
     // MARK: - UI Components
     
-    private var headerView: some View {
-        ZStack {
-            Color.green
-            
-            VStack {
-                HStack {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        HStack {
-                            Image(systemName: "arrow.left")
-                                .foregroundColor(.white)
-                            
-                            Text("Reminders")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        showNewReminderSheet = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                            
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.green)
-                        }
-                        .frame(width: 36, height: 36)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
-            }
-            .padding(.top, 40)
-            .padding(.bottom, 16)
-        }
-        .frame(height: 110)
-    }
+     private var headerView: some View {
+         ZStack {
+             Color(Color(hex: "4CAF50")).ignoresSafeArea()
+             
+             VStack {
+                 HStack {
+                     Button(action: {
+                         dismiss()
+                     }) {
+                         HStack {
+                             Image(systemName: "arrow.left")
+                                 .foregroundColor(.white)
+                             
+                             Text("Reminders")
+                                 .font(.title3)
+                                 .fontWeight(.bold)
+                                 .foregroundColor(.white)
+                         }
+                     }
+                     
+                     Spacer()
+                     
+                     Button(action: {
+                         showNewReminderSheet = true
+                     }) {
+                         ZStack {
+                             Circle()
+                                 .fill(Color.white.opacity(0.2))
+                             
+                             Image(systemName: "plus.circle.fill")
+                                 .foregroundColor(.white)
+                         }
+                         .frame(width: 36, height: 36)
+                     }
+                 }
+                 .padding(.horizontal)
+                 .padding(.top, 8)
+             }
+             .padding(.top, UIApplication.shared.windows.first?.safeAreaInsets.top ?? 40)
+             .padding(.bottom, 16)
+         }
+         .frame(height: 60 + (UIApplication.shared.windows.first?.safeAreaInsets.top ?? 0))
+     }
+     
     
     private var emptyStateView: some View {
         VStack {
@@ -207,6 +223,8 @@ struct NewReminderSheet: View {
     @State private var availableLists: [ShoppingList] = []
     @State private var availableItems: [ShoppingItem] = []
     
+    @State private var isFetchingLists = false
+    
     let addReminder: (ShoppingReminder) -> Void
     
     var body: some View {
@@ -237,7 +255,7 @@ struct NewReminderSheet: View {
                         
                         Button(action: {
                             Task {
-                                // Fetch available lists
+                                isFetchingLists = true
                                 if let userId = authManager.currentFirebaseUser?.uid {
                                     do {
                                         availableLists = try await FirestoreService.getUserLists(userId: userId)
@@ -246,11 +264,18 @@ struct NewReminderSheet: View {
                                         print("Error fetching lists: \(error)")
                                     }
                                 }
+                                isFetchingLists = false
                             }
                         }) {
                             HStack {
-                                Text(selectedList?.name ?? "Choose a list")
-                                    .foregroundColor(selectedList != nil ? .black : .gray)
+                                if isFetchingLists {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle())
+                                        .frame(width: 20, height: 20)
+                                } else {
+                                    Text(selectedList?.name ?? "Choose a list")
+                                        .foregroundColor(selectedList != nil ? .black : .gray)
+                                }
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .foregroundColor(.gray)
@@ -259,10 +284,12 @@ struct NewReminderSheet: View {
                             .background(Color(UIColor.systemGray6))
                             .cornerRadius(8)
                         }
+                        .disabled(isFetchingLists) // Prevent tapping while loading
                         .sheet(isPresented: $showListPicker) {
                             listPickerView
                         }
                     }
+
                     
                     // Item Selection (only for item type)
                     if reminderType == .item {
@@ -499,6 +526,214 @@ struct NewReminderSheet: View {
     }
 }
 
+// MARK: - Calendar Components
+
+// Calendar month view
+struct CalendarMonthView: View {
+    @Binding var selectedMonth: Date
+    @Binding var selectedDate: Date
+    let reminders: [ShoppingReminder]
+    
+    private let calendar = Calendar.current
+    private let daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"]
+    
+    var body: some View {
+        VStack {
+            // Month header
+            HStack {
+                Text(monthYearFormatter.string(from: selectedMonth))
+                    .font(.headline)
+                    .fontWeight(.medium)
+                
+                Spacer()
+                
+                HStack(spacing: 20) {
+                    Button(action: previousMonth) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.green)
+                    }
+                    
+                    Button(action: {
+                        selectedMonth = Date()
+                        selectedDate = Date()
+                    }) {
+                        Text("Today")
+                            .foregroundColor(.green)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Button(action: nextMonth) {
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.green)
+                    }
+                }
+            }
+            .padding(.bottom, 5)
+            
+            // Days of week header
+            HStack {
+                ForEach(daysOfWeek, id: \.self) { day in
+                    Text(day)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(day == "S" ? .red : .primary)
+                }
+            }
+            .padding(.bottom, 5)
+            
+            // Calendar grid
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 10) {
+                ForEach(days(), id: \.self) { date in
+                    if let date = date {
+                        CalendarDayView(
+                            date: date,
+                            isSelected: isSameDay(date, selectedDate),
+                            isToday: isToday(date),
+                            hasReminders: hasReminders(on: date)
+                        )
+                        .onTapGesture {
+                            selectedDate = date
+                        }
+                    } else {
+                        // Empty day (placeholder for days from other months)
+                        Text("")
+                            .frame(height: 40)
+                    }
+                }
+            }
+        }
+        .padding(.vertical)
+    }
+    
+    private var monthYearFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter
+    }
+    
+    // Generate days for the month
+    private func days() -> [Date?] {
+        let firstDayOfMonth = firstDay(of: selectedMonth)
+        let daysInMonth = calendar.range(of: .day, in: .month, for: selectedMonth)!.count
+        
+        // Get weekday of first day (0 = Sunday, 1 = Monday, etc.)
+        let firstWeekday = calendar.component(.weekday, from: firstDayOfMonth) - 1
+        
+        var days = [Date?]()
+        
+        // Add empty slots for days before the first day of month
+        for _ in 0..<firstWeekday {
+            days.append(nil)
+        }
+        
+        // Add days of the month
+        for day in 1...daysInMonth {
+            if let date = calendar.date(byAdding: .day, value: day - 1, to: firstDayOfMonth) {
+                days.append(date)
+            }
+        }
+        
+        // Fill the remaining days to complete the grid (42 = 6 weeks) or at least 35 (5 weeks)
+        let targetCount = days.count <= 35 ? 35 : 42
+        while days.count < targetCount {
+            days.append(nil)
+        }
+        
+        return days
+    }
+    
+    private func firstDay(of date: Date) -> Date {
+        return calendar.date(from: calendar.dateComponents([.year, .month], from: date))!
+    }
+    
+    private func isSameDay(_ date1: Date?, _ date2: Date?) -> Bool {
+        guard let date1 = date1, let date2 = date2 else { return false }
+        return calendar.isDate(date1, inSameDayAs: date2)
+    }
+    
+    private func isToday(_ date: Date) -> Bool {
+        return calendar.isDateInToday(date)
+    }
+    
+    private func hasReminders(on date: Date) -> Bool {
+        return reminders.contains { reminder in
+            reminder.isActive && calendar.isDate(reminder.date, inSameDayAs: date)
+        }
+    }
+    
+    private func previousMonth() {
+        if let newMonth = calendar.date(byAdding: .month, value: -1, to: selectedMonth) {
+            selectedMonth = newMonth
+        }
+    }
+    
+    private func nextMonth() {
+        if let newMonth = calendar.date(byAdding: .month, value: 1, to: selectedMonth) {
+            selectedMonth = newMonth
+        }
+    }
+}
+
+// Calendar day view
+struct CalendarDayView: View {
+    let date: Date
+    let isSelected: Bool
+    let isToday: Bool
+    let hasReminders: Bool
+    
+    private let calendar = Calendar.current
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(backgroundColor)
+                .frame(height: 40)
+            
+            VStack {
+                Text("\(dayNumber)")
+                    .foregroundColor(textColor)
+                    .font(.system(size: 16))
+                
+                if hasReminders {
+                    Circle()
+                        .fill(Color.purple)
+                        .frame(width: 5, height: 5)
+                }
+            }
+        }
+    }
+    
+    private var dayNumber: Int {
+        calendar.component(.day, from: date)
+    }
+    
+    private var isWeekend: Bool {
+        let weekday = calendar.component(.weekday, from: date)
+        return weekday == 1 || weekday == 7
+    }
+    
+    private var backgroundColor: Color {
+        if isSelected {
+            return .green
+        } else if isToday {
+            return Color.green.opacity(0.3)
+        } else {
+            return .clear
+        }
+    }
+    
+    private var textColor: Color {
+        if isSelected {
+            return .white
+        } else if isWeekend {
+            return .red
+        } else {
+            return .primary
+        }
+    }
+}
+
 struct ReminderView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack {
@@ -507,3 +742,4 @@ struct ReminderView_Previews: PreviewProvider {
         }
     }
 }
+

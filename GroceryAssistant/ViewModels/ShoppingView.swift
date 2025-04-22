@@ -132,7 +132,7 @@ struct ShoppingView: View {
             navigationHeader
             shoppingProgressSection
         }
-        .background(Color.green)
+        .background(Color(hex: "4CAF50"))
     }
 
     // MARK: - Navigation Header Component

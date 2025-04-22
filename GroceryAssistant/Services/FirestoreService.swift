@@ -272,4 +272,102 @@ struct FirestoreService {
             .document(reminderId)
             .delete()
     }
+    
+    static func savePurchaseItems(userId: String, purchaseId: String, items: [ShoppingItem]) async throws {
+        let batch = db.batch()
+        
+        for item in items {
+            let itemRef = db.collection("users")
+                .document(userId)
+                .collection("purchaseItems")
+                .document()
+            
+            var itemData = item.toDictionary()
+            itemData["purchaseId"] = purchaseId
+            
+            batch.setData(itemData, forDocument: itemRef)
+        }
+        
+        try await batch.commit()
+    }
+    
+    // Helper extension for ShoppingItem
+    static func createPurchaseFromList(list: ShoppingList, items: [ShoppingItem], store: String, totalSpent: Double) async throws -> Purchase {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw AuthError.notAuthenticated
+        }
+        
+        let purchase = Purchase(
+            id: UUID().uuidString,
+            listId: list.id,
+            listName: list.name,
+            date: Date(),
+            itemCount: items.count,
+            totalSpent: totalSpent,
+            storeName: store,
+            userId: userId
+        )
+        
+        try await db.collection("users")
+            .document(userId)
+            .collection("purchases")
+            .document(purchase.id)
+            .setData(from: purchase)
+        
+        return purchase
+    }
+    
+    static func getBuyItems() async throws -> [Buy] {
+        let snapshot = try await db.collection("shop").getDocuments()
+        
+        var buyItems: [Buy] = []
+        
+        for document in snapshot.documents {
+            let data = document.data()
+            
+            guard let name = data["name"] as? String,
+                  let quantity = data["quantity"] as? String,
+                  let price = data["price"] as? Double,
+                  let link = data["link"] as? String,
+                  let image = data["image"] as? String else {
+                print("Error parsing shop item document: \(document.documentID)")
+                continue
+            }
+            
+            let buyItem = Buy(
+                name: name,
+                quantity: quantity,
+                price: price,
+                link: link,
+                image: image
+            )
+            
+            buyItems.append(buyItem)
+        }
+        
+        return buyItems
+    }
+    
+    // Get all categories for a user
+    static func getUserCategories(userId: String) async throws -> [ShoppingCategory] {
+        let querySnapshot = try await db.collection("users")
+            .document(userId)
+            .collection("categories")
+            .order(by: "name")
+            .getDocuments()
+        
+        return querySnapshot.documents.compactMap { document in
+            // Get the document data
+            let data = document.data()
+            
+            // Extract the name from the data
+            guard let name = data["name"] as? String else { return nil }
+            
+            // Create a ShoppingCategory object
+            return ShoppingCategory(
+                id: document.documentID,
+                name: name
+            )
+        }
+    }
 }

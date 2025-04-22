@@ -11,6 +11,10 @@
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>We use your Reminders to schedule shopping list alerts and notifications.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs your location to show nearby stores and features on the map.</string>
+	<string>We need your location to show weather information.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict/>
+	<key>NSAllowsArbitraryLoads</key>
+	<string></string>
 </dict>
 </plist>

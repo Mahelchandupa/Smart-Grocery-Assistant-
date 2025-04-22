@@ -151,7 +151,7 @@ struct ProfileView: View {
     // Header view
     private var headerView: some View {
         ZStack {
-            AppColors.green600
+            Color(hex: "4CAF50")
                 .ignoresSafeArea(edges: .top)
             VStack {
                 HStack {

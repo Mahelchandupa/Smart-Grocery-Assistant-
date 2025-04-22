@@ -10,7 +10,7 @@ struct ListsView: View {
         VStack(spacing: 0) {
             // Header
             ZStack {
-                Color(hex: "16A34A")
+                Color(Color(hex: "4CAF50"))
                     .ignoresSafeArea(edges: .top)
                 
                 VStack(spacing: 4) {
@@ -41,7 +41,7 @@ struct ListsView: View {
                     }
                 }
                 .padding(.top, 25)
-                .padding(.bottom, 20)
+                .padding(.bottom, 25)
                 .padding(.horizontal, 16)
             }
             .frame(height: 60)

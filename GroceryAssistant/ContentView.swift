@@ -105,6 +105,8 @@ struct ContentView: View {
             LocatorView(navPath: $navPath)
         case .history:
             HistoryView(navPath: $navPath)
+        case .buy:
+            BuyItemsView(navPath: $navPath)
         }
     }
 }
@@ -155,7 +157,7 @@ struct CustomTabBar: View {
     func getIconName(for index: Int) -> String {
         switch index {
         case 0: return "leaf"              // Nutritional
-        case 1: return "location"          // Locator
+        case 1: return "mappin.and.ellipse"          // Locator
         case 2: return "house"             // Home
         case 3: return "list.bullet"       // Item Lists
         case 4: return "calendar"          // Reminders

@@ -44,7 +44,7 @@ struct NutritionalInfoView: View {
     // Header view
     private var headerView: some View {
         ZStack {
-            AppColors.green600
+            Color(hex: "4CAF50")
                 .ignoresSafeArea(edges: .top)
             VStack {
                 HStack {
@@ -59,7 +59,7 @@ struct NutritionalInfoView: View {
                     }
                     .padding(.trailing, 8)
                     
-                    Text("Profile")
+                    Text("Nutritional Info")
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -333,7 +333,7 @@ struct NutritionalInfoView: View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .padding(12)
+                        .padding(6)
                         .frame(width: 80, height: 80)
                         .background(Color(AppColors.green500).opacity(0.1))
                         .cornerRadius(8)
@@ -341,7 +341,7 @@ struct NutritionalInfoView: View {
                     Image(systemName: product.image.foodImage(fallback: "leaf"))
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .padding(12)
+                        .padding(6)
                         .frame(width: 80, height: 80)
                         .background(Color(AppColors.green500).opacity(0.1))
                         .foregroundColor(AppColors.green500)

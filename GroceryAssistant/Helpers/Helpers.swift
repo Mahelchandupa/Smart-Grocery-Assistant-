@@ -67,3 +67,26 @@ extension Encodable {
     }
 }
 
+//private func formattedForecastDate(_ date: Date) -> String {
+//    if Calendar.current.isDateInToday(date) {
+//        return "Today"
+//    } else if Calendar.current.isDateInTomorrow(date) {
+//        return "Tomorrow"
+//    }
+//    
+//    let formatter = DateFormatter()
+//    formatter.dateFormat = "EEE"
+//    return formatter.string(from: date) // "Mon", "Tue"
+//}
+//
+//private func systemSymbol(for condition: String) -> String {
+//    // Map WeatherKit symbols to SF Symbols (rough match)
+//    switch condition {
+//    case "cloud.sun": return "cloud.sun.fill"
+//    case "cloud.rain": return "cloud.rain.fill"
+//    case "sun.max": return "sun.max.fill"
+//    case "cloud.bolt": return "cloud.bolt.fill"
+//    case "cloud.snow": return "cloud.snow.fill"
+//    default: return "cloud.fill"
+//    }
+//}

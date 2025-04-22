@@ -24,7 +24,7 @@ struct CreateNewListView: View {
         VStack(spacing: 0) {
             // Header
             ZStack {
-                Color.green
+                Color(hex: "4CAF50")
                     .ignoresSafeArea()
                     .frame(height: 60)
                 

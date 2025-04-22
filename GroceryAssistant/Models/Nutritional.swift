@@ -38,7 +38,7 @@ struct FoodProduct: Identifiable {
                 id: "1",
                 name: "Organic Apple",
                 brand: "Nature's Best",
-                image: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.orgpick.com%2Fblogs%2Fnews%2Famazing-benefits-of-organic-apple&psig=AOvVaw3_MrddY5jeKzIdxcElP-s0&ust=1745304577841000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCJCCuq7E6IwDFQAAAAAdAAAAABAE",
+                image: "https://www.orgpick.com/cdn/shop/articles/Apple_1024x1024.jpg?v=1547124407",
                 serving: "1 medium (182g)",
                 calories: 95,
                 nutrients: [
@@ -74,7 +74,7 @@ struct FoodProduct: Identifiable {
                 id: "2",
                 name: "Whole Milk",
                 brand: "Dairy Farms",
-                image: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.heritagefoods.in%2Fblog%2Fdifferent-types-of-milk%2F&psig=AOvVaw1Sn8wC29TtWNXi0D2cHCew&ust=1745304622466000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCNjK28LE6IwDFQAAAAAdAAAAABAE",
+                image: "https://s3.us-west-2.amazonaws.com/www.gethomesome.com/productimages/whole-milk-darigold.jpg",
                 serving: "1 cup (244g)",
                 calories: 149,
                 nutrients: [
@@ -110,7 +110,7 @@ struct FoodProduct: Identifiable {
                 id: "3",
                 name: "Chicken Breast",
                 brand: "Farm Fresh",
-                image: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fdownshiftology.com%2Frecipes%2Fair-fryer-chicken-breast%2F&psig=AOvVaw0a2FnjhbN2P-73Xbh-VdSD&ust=1745304660901000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCOCT69XE6IwDFQAAAAAdAAAAABAK",
+                image: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fdownshiftology.https://downshiftology.com/wp-content/uploads/2023/01/How-To-Make-Air-Fryer-Chicken-5.jpg",
                 serving: "100g",
                 calories: 165,
                 nutrients: [
@@ -146,7 +146,7 @@ struct FoodProduct: Identifiable {
                 id: "4",
                 name: "Pasta",
                 brand: "Italian Kitchen",
-                image: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.istockphoto.com%2Fphotos%2Fpenne-pasta&psig=AOvVaw1_ehwSnRTK5_e9JPdeOHKM&ust=1745304703245000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCPiypejE6IwDFQAAAAAdAAAAABAE",
+                image: "https://media.istockphoto.com/id/155433174/photo/bolognese-pens.jpg?s=612x612&w=0&k=20&c=A_TBqOAzcOkKbeVv8qSDs0bukfAedhkA458JEFolo_M=",
                 serving: "100g (dry)",
                 calories: 371,
                 nutrients: [
@@ -182,7 +182,7 @@ struct FoodProduct: Identifiable {
                 id: "5",
                 name: "Avocado",
                 brand: "Fresh Organics",
-                image: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.istockphoto.com%2Fphotos%2Favocado&psig=AOvVaw1ZeTAgAx1y8ipncoa7VTin&ust=1745304729411000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCPCrmvbE6IwDFQAAAAAdAAAAABAE",
+                image: "https://media.istockphoto.com/id/1210634323/photo/avocado-on-old-wooden-table-in-bowl.jpg?s=612x612&w=0&k=20&c=yEPVRJU3_7tw_1zK5DB5SbvxEG-jsSWTet8tvWc0-pc=",
                 serving: "1 medium (150g)",
                 calories: 240,
                 nutrients: [

@@ -57,15 +57,15 @@ struct RecipeSuggestionsView: View {
                     }
                 }
             }
-            .navigationBarHidden(true)
         }
+        .navigationBarHidden(true)
     }
     
     // MARK: - Component Views
     
     var headerView: some View {
         ZStack {
-            Color.green
+            Color(hex: "4CAF50")
                 .edgesIgnoringSafeArea(.top)
             
             HStack {
