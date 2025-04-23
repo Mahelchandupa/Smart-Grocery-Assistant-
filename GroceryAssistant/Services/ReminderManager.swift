@@ -3,37 +3,49 @@ import UIKit
 import EventKit
 import UserNotifications
 
-// ReminderManager to handle EventKit and Firestore operations
+/// A manager class that handles all reminder-related operations in the application.
+/// This includes creating, updating, and deleting reminders both in the EventKit system
+/// and in Firestore, as well as scheduling local notifications for reminders.
 class ReminderManager: ObservableObject {
+    /// The EventKit event store used for system calendar and reminder operations
     private let eventStore = EKEventStore()
+
+    /// All reminders for the current user
     @Published var reminders: [ShoppingReminder] = []
+
+    /// Indicates whether reminders are currently being loaded
     @Published var isLoading: Bool = false
     
-    // Computed properties for active/inactive reminders
+    /// Filtered array of active reminders
     var activeReminders: [ShoppingReminder] {
         reminders.filter { $0.isActive }
     }
-    
+
+    /// Filtered array of inactive reminders
     var inactiveReminders: [ShoppingReminder] {
         reminders.filter { !$0.isActive }
     }
     
-    // Request access to EKEventStore and UNUserNotificationCenter
+    /// Requests access to Calendar/Reminders and Notifications.
+    /// This method handles permission requests differently based on iOS version.
+    ///
+    /// - Parameter completion: A closure that is called with a boolean indicating
+    ///   whether permission was granted for both EventKit and notifications
     func requestAccess(completion: @escaping (Bool) -> Void) {
         // Request EventKit access
         if #available(iOS 17.0, *) {
             Task {
                 do {
                     print("Requesting EventKit permission for iOS 17+")
-                    // For iOS 17, we need to request full access
+                    // request full access
                     let accessGranted = try await eventStore.requestFullAccessToReminders()
                     print("EventKit full access granted: \(accessGranted)")
                     
                     if !accessGranted {
-                        print("⚠️ User denied EventKit permissions!")
+                        print(" User denied EventKit permissions!")
                         DispatchQueue.main.async {
                             completion(false)
-                            self.promptToOpenSettings() // 🔥 Add this line
+                            self.promptToOpenSettings()
                         }
                         return
                     }
@@ -56,7 +68,7 @@ class ReminderManager: ObservableObject {
                     }
                     
                 } catch {
-                    print("❌ Error requesting EventKit permission: \(error)")
+                    print("Error requesting EventKit permission: \(error)")
                     DispatchQueue.main.async {
                         completion(false)
                     }
@@ -72,7 +84,7 @@ class ReminderManager: ObservableObject {
                 }
                 
                 if !granted {
-                    print("⚠️ User denied EventKit permissions!")
+                    print("User denied EventKit permissions!")
                     DispatchQueue.main.async {
                         completion(false)
                     }
@@ -95,6 +107,8 @@ class ReminderManager: ObservableObject {
         }
     }
     
+    /// Prompts the user to open the Settings app to change permissions.
+    /// This is typically called when the user has previously denied a required permission.
     private func promptToOpenSettings() {
         guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
         
@@ -104,7 +118,9 @@ class ReminderManager: ObservableObject {
     }
 
     
-    // Fetch reminders from Firestore
+    /// Fetches all reminders for the specified user from Firestore.
+    ///
+    /// - Parameter userId: The ID of the user whose reminders should be fetched
     func fetchReminders(userId: String?) async {
         guard let userId = userId else { return }
         
@@ -126,32 +142,13 @@ class ReminderManager: ObservableObject {
             }
         }
     }
-    
-    // Add a new reminder
-//    func addReminder(reminder: ShoppingReminder, userId: String?) async {
-//        guard let userId = userId else { return }
-//        
-//        do {
-//            // 1. Create the reminder in EventKit
-//            let eventId = try await createEventKitReminder(reminder: reminder)
-//            
-//            // 2. Update the reminder with the EventKit ID
-//            var updatedReminder = reminder
-//            updatedReminder.eventId = eventId
-//            
-//            // 3. Save to Firestore
-//            try await FirestoreService.saveReminder(userId: userId, reminder: updatedReminder)
-//            
-//            // 4. Schedule a local notification
-//            scheduleNotification(for: updatedReminder)
-//            
-//            // 5. Refresh the reminders list
-//            await fetchReminders(userId: userId)
-//        } catch {
-//            print("Error adding reminder: \(error)")
-//        }
-//    }
-    
+
+    /// Creates a new reminder and saves it both to the system's EventKit and to Firestore.
+    /// Also schedules a local notification for the reminder.
+    ///
+    /// - Parameters:
+    ///   - reminder: The ShoppingReminder object to add
+    ///   - userId: The ID of the user creating the reminder
     func addReminder(reminder: ShoppingReminder, userId: String?) async {
         guard let userId = userId else {
             print("Error: userId is nil")
@@ -190,7 +187,13 @@ class ReminderManager: ObservableObject {
         }
     }
     
-    // Toggle reminder active status
+    /// Toggles the active status of a reminder both in EventKit and Firestore.
+    /// When a reminder is toggled to active, a notification is scheduled.
+    /// When toggled to inactive, the notification is canceled.
+    ///
+    /// - Parameters:
+    ///   - id: The ID of the reminder to toggle
+    ///   - userId: The ID of the user who owns the reminder
     func toggleReminderStatus(id: String, userId: String?) async {
         guard let userId = userId,
               let reminderIndex = reminders.firstIndex(where: { $0.id == id }) else { return }
@@ -234,13 +237,18 @@ class ReminderManager: ObservableObject {
         }
     }
     
-    // Delete a reminder
+    /// Deletes a reminder from both EventKit and Firestore.
+    /// Also cancels any pending notification for the reminder.
+    ///
+    /// - Parameters:
+    ///   - id: The ID of the reminder to delete
+    ///   - userId: The ID of the user who owns the reminder
     func deleteReminder(id: String, userId: String?) async {
         guard let userId = userId,
               let reminder = reminders.first(where: { $0.id == id }) else { return }
         
         do {
-            // Delete from EventKit if we have an event ID
+            // Delete from EventKit if have an event ID
             if let eventId = reminder.eventId {
                 try await deleteEventKitReminder(eventId: eventId)
             }
@@ -261,18 +269,24 @@ class ReminderManager: ObservableObject {
     }
     
     // MARK: - EventKit Integration
+    
+    /// Creates a new reminder in the system's EventKit.
+    ///
+    /// - Parameter reminder: The ShoppingReminder object to create in EventKit
+    /// - Throws: NSError if permissions aren't granted or if the reminder creation fails
+    /// - Returns: The EventKit identifier for the created reminder
     private func createEventKitReminder(reminder: ShoppingReminder) async throws -> String {
-        // First, verify we have permissions
+        // First, verify have permissions
         if #available(iOS 17.0, *) {
             guard await EKEventStore.authorizationStatus(for: .reminder) == .fullAccess else {
-                print("❌ EventKit permission not granted - need full access")
+                print("EventKit permission not granted - need full access")
                 throw NSError(domain: "ReminderManager",
                               code: 403,
                               userInfo: [NSLocalizedDescriptionKey: "EventKit permission not granted"])
             }
         } else {
             guard EKEventStore.authorizationStatus(for: .reminder) == .authorized else {
-                print("❌ EventKit permission not granted")
+                print("EventKit permission not granted")
                 throw NSError(domain: "ReminderManager",
                               code: 403,
                               userInfo: [NSLocalizedDescriptionKey: "EventKit permission not granted"])
@@ -288,7 +302,7 @@ class ReminderManager: ObservableObject {
         
         // Verify calendar is available
         guard let calendar = eventStore.defaultCalendarForNewReminders() else {
-            print("❌ No default calendar available for reminders")
+            print("No default calendar available for reminders")
             throw NSError(domain: "ReminderManager",
                           code: 404,
                           userInfo: [NSLocalizedDescriptionKey: "No default calendar available"])
@@ -313,14 +327,20 @@ class ReminderManager: ObservableObject {
         do {
             // Save the reminder
             try eventStore.save(ekReminder, commit: true)
-            print("✅ Successfully saved EventKit reminder")
+            print("Successfully saved EventKit reminder")
             return ekReminder.calendarItemIdentifier
         } catch {
-            print("❌ Failed to save reminder: \(error)")
+            print("Failed to save reminder: \(error)")
             throw error
         }
     }
     
+    /// Updates an existing EventKit reminder's completed status.
+    ///
+    /// - Parameters:
+    ///   - eventId: The EventKit identifier of the reminder to update
+    ///   - isActive: The new active state (false means completed in EventKit)
+    /// - Throws: NSError if the reminder is not found or can't be updated
     private func updateEventKitReminder(eventId: String, isActive: Bool) async throws {
         let predicate = eventStore.predicateForReminders(in: nil)
         let reminders = try await withCheckedThrowingContinuation { continuation in
@@ -341,6 +361,10 @@ class ReminderManager: ObservableObject {
         try eventStore.save(ekReminder, commit: true)
     }
 
+    /// Deletes an EventKit reminder.
+    ///
+    /// - Parameter eventId: The EventKit identifier of the reminder to delete
+    /// - Throws: NSError if the reminder is not found or can't be deleted
     private func deleteEventKitReminder(eventId: String) async throws {
         let predicate = eventStore.predicateForReminders(in: nil)
         let reminders = try await withCheckedThrowingContinuation { continuation in
@@ -359,10 +383,12 @@ class ReminderManager: ObservableObject {
 
         try eventStore.remove(ekReminder, commit: true)
     }
-
-    
+ 
     // MARK: - Push Notifications
     
+    /// Schedules a local notification for a reminder.
+    ///
+    /// - Parameter reminder: The ShoppingReminder to schedule a notification for    
     private func scheduleNotification(for reminder: ShoppingReminder) {
         let content = UNMutableNotificationContent()
         content.title = reminder.title
@@ -398,6 +424,9 @@ class ReminderManager: ObservableObject {
         }
     }
     
+    /// Cancels a pending notification for a reminder.
+    ///
+    /// - Parameter reminderID: The ID of the reminder whose notification should be canceled
     private func cancelNotification(for reminderID: String) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [reminderID])
     }

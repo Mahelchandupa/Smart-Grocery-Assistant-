@@ -4,25 +4,42 @@ import FirebaseAuth
 import LocalAuthentication
 import FirebaseFirestore
 
-// Main AuthManager class
+/// AuthManager is responsible for handling all authentication-related operations in the app.
+/// It manages user state, authentication flows, and provides methods for sign-in, sign-up,
+/// and biometric authentication. The class also includes Firestore operations that require
+/// authentication context.
 class AuthManager: ObservableObject {
+    /// The current Firebase User object, if a user is authenticated
     @Published var currentFirebaseUser: FirebaseAuth.User?
+    
+    /// The application's user model that includes additional profile information
+    /// beyond what Firebase Auth provides
     @Published var currentUser: User?
+
+    /// A boolean value indicating whether a user is currently authenticated
     @Published var isAuthenticated = false
+
+    /// The most recent authentication error message, if any
     @Published var authError: String?
     
-    // We'll make this optional since it might not always be needed
+    /// Optional navigation path for handling navigation after authentication events
+    /// Make this optional since it might not always be needed
     var navPath: Binding<NavigationPath>?
     
+    /// Initializes a new AuthManager and sets up Firebase authentication state listener
     init() {
         setupAuthListener()
     }
     
+    /// Convenience initializer that takes a navigation path for routing after auth events
+    /// - Parameter navPath: The navigation path binding to use for routing
     convenience init(navPath: Binding<NavigationPath>) {
         self.init()
         self.navPath = navPath
     }
-    
+
+    /// Sets up the Firebase authentication state change listener
+    /// This listener updates the current user whenever authentication state changes  
     private func setupAuthListener() {
         Auth.auth().addStateDidChangeListener { [weak self] _, user in
             self?.currentFirebaseUser = user
@@ -46,7 +63,10 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // Sign In Method with async/await
+    /// Signs in a user with the provided email and password
+    /// - Parameter request: The sign-in request containing email, password, and remember me flag
+    /// - Throws: An error if sign-in fails
+    /// - Returns: Void
     func signIn(with request: SignInRequest) async throws {
         do {
             // Sign in with Firebase
@@ -79,7 +99,10 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // Sign In Method with completion handler (for biometric auth)
+    /// Signs in a user with completion handler (used for biometric authentication)
+    /// - Parameters:
+    ///   - request: The sign-in request containing email, password, and remember me flag
+    ///   - completion: Completion handler called with success status and optional error message
     func signIn(with request: SignInRequest, completion: @escaping (Bool, String?) -> Void) {
         Task {
             do {
@@ -91,7 +114,10 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // Sign Up Method
+    /// Creates a new user account with the provided details
+    /// - Parameter request: The sign-up request containing user details and password
+    /// - Throws: An error if sign-up fails
+    /// - Returns: Void
     func signUp(with request: SignUpRequest) async throws {
         do {
             let userData: [String: Any] = [
@@ -131,7 +157,8 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // Sign Out Method
+    /// Signs out the current user
+    /// - Throws: An error if sign-out fails
     func signOut() throws {
         do {
             try AuthService.signOut()
@@ -143,7 +170,8 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // Biometric Authentication
+    /// Authenticates the user using device biometrics (Face ID or Touch ID)
+    /// - Parameter completion: Completion handler called with success status and optional error message
     func authenticateWithBiometrics(completion: @escaping (Bool, String?) -> Void) {
         // Check if we have stored credentials
         guard let credentials = KeychainService.getCredentials() else {
@@ -176,24 +204,35 @@ class AuthManager: ObservableObject {
         }
     }
      
-    // ------------- Firestore Methods -------------- //
-
+    // MARK: - Firestore Methods
+    
+    /// Creates a new shopping list for the current user
+    /// - Parameter list: The shopping list to create
+    /// - Throws: AuthError.notAuthenticated if no user is signed in, or any Firestore errors
     func createList(_ list: ShoppingList) async throws {
         guard let userId = currentFirebaseUser?.uid else { throw AuthError.notAuthenticated }
         try await FirestoreService.createList(userId: userId, list: list)
     }
     
+    /// Retrieves all shopping lists for the current user
+    /// - Throws: AuthError.notAuthenticated if no user is signed in, or any Firestore errors
+    /// - Returns: An array of ShoppingList objects
     func getUserLists() async throws -> [ShoppingList] {
         guard let userId = currentFirebaseUser?.uid else { throw AuthError.notAuthenticated }
         return try await FirestoreService.getUserLists(userId: userId)
     }
 
+    /// Retrieves all shopping items across all lists for the current user
+    /// - Throws: AuthError.notAuthenticated if no user is signed in, or any Firestore errors
+    /// - Returns: An array of ShoppingItem objects
     func getAllItems() async throws -> [ShoppingItem] {
         guard let userId = currentFirebaseUser?.uid else { throw AuthError.notAuthenticated }
         return try await FirestoreService.getAllItems(userId: userId)
     }
 
-    // Error Handling
+    /// Translates authentication errors into user-friendly messages
+    /// - Parameter error: The original error from Firebase Auth
+    /// - Returns: A user-friendly error message
     private func handleError(_ error: Error) -> String {
         let authError = error as NSError
         
@@ -216,8 +255,11 @@ class AuthManager: ObservableObject {
     }
 }
 
-// Extension to create an error alert when needed
+/// Extension to add an error alert modifier to any SwiftUI View
 extension View {
+    /// Adds an authentication error alert to a view
+    /// - Parameter authManager: The AuthManager instance to monitor for errors
+    /// - Returns: A modified view with an alert that displays authentication errors
     func authErrorAlert(authManager: AuthManager) -> some View {
         alert(isPresented: .constant(authManager.authError != nil)) {
             Alert(

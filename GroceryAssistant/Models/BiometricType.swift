@@ -1,12 +1,8 @@
-//
-//  BiometricType.swift
-//  GroceryAssistant
-//
-//  Created by sasiri rukshan nanayakkara on 3/30/25.
-//
+// MARK: - Biometric Authentication
 
 import Foundation
 
+/// Represents the available types of biometric authentication on the device.
 enum BiometricType {
     /// No biometric authentication available
     case none

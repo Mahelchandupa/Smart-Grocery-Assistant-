@@ -2,28 +2,35 @@ import Foundation
 import WeatherKit
 import CoreLocation
 
-struct DayForecast: Identifiable {
-    let id = UUID()
-    let date: Date
-    let dayName: String
-    let temperature: String
-    let high: String
-    let low: String
-    let condition: String
-    let conditionIcon: String
-}
-
+/// A manager class that handles weather data retrieval and processing.
+/// This class uses WeatherKit as the primary source and falls back to OpenWeather API
+/// if WeatherKit data is unavailable.
 class WeatherManager: NSObject, ObservableObject {
+    /// The Apple WeatherKit service for retrieving weather data
     private let service = WeatherService()
+
+    /// Location manager for retrieving the user's current location
     private let locationManager = CLLocationManager()
+   
+    /// API key for the OpenWeather service (fallback weather provider)
     private let openWeatherAPIKey = "8b7675d1c0cbf658324a749f114d6aae"
     
+    /// Current temperature formatted as a string with units
     @Published var temperature: String = "--"
+    
+    /// Current weather condition description
     @Published var condition: String = "Loading..."
+    
+    /// Source of the weather data ("WeatherKit" or "OpenWeather")
     @Published var source: String = ""
+    
+    /// Array of forecast days
     @Published var forecasts: [DayForecast] = []
+    
+    /// Flag indicating whether weather data is currently being loaded
     @Published var isLoading: Bool = true
 
+    /// Initializes the WeatherManager and starts the location request process
     override init() {
         super.init()
         locationManager.delegate = self
@@ -31,6 +38,8 @@ class WeatherManager: NSObject, ObservableObject {
         locationManager.requestLocation()
     }
 
+    /// Fetches weather data from Apple's WeatherKit for the specified location
+    /// - Parameter location: The geographic location for which to retrieve weather data
     private func fetchWeatherKitData(for location: CLLocation) {
         Task {
             do {
@@ -41,7 +50,7 @@ class WeatherManager: NSObject, ObservableObject {
                 )
                 
                 let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "E" // Day name abbreviation
+                dateFormatter.dateFormat = "E"
                 
                 var newForecasts: [DayForecast] = []
                 
@@ -76,6 +85,9 @@ class WeatherManager: NSObject, ObservableObject {
         }
     }
 
+    /// Converts a WeatherKit weather condition to an appropriate SF Symbol icon name
+    /// - Parameter condition: The WeatherKit condition to convert
+    /// - Returns: The name of the SF Symbol that represents the condition
     private func getIconName(for condition: WeatherCondition) -> String {
         switch condition {
         case .clear:
@@ -93,6 +105,8 @@ class WeatherManager: NSObject, ObservableObject {
         }
     }
 
+    /// Fetches weather data from the OpenWeather API as a fallback
+    /// - Parameter location: The geographic location for which to retrieve weather data
     private func fetchOpenWeatherData(for location: CLLocation) {
         // Current weather
         let currentUrlString = """
@@ -224,6 +238,9 @@ class WeatherManager: NSObject, ObservableObject {
         }.resume()
     }
     
+    /// Converts an OpenWeather icon code to an appropriate SF Symbol icon name
+    /// - Parameter code: The OpenWeather icon code to convert
+    /// - Returns: The name of the SF Symbol that represents the weather condition
     private func getOpenWeatherIcon(code: String) -> String {
         // Map OpenWeather icon codes to SF Symbols
         switch code {
@@ -240,14 +257,25 @@ class WeatherManager: NSObject, ObservableObject {
     }
 }
 
+// MARK: - CLLocationManagerDelegate
+
 extension WeatherManager: CLLocationManagerDelegate {
+    /// Handles location updates from the location manager
+    /// - Parameters:
+    ///   - manager: The location manager providing the update
+    ///   - locations: An array of locations, with the most recent location last
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let location = locations.first {
             fetchWeatherKitData(for: location)
         }
     }
 
+    /// Handles location manager errors
+    /// - Parameters:
+    ///   - manager: The location manager reporting the error
+    ///   - error: The error that occurred
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location error: \(error.localizedDescription)")
     }
 }
+

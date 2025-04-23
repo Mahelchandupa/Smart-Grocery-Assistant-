@@ -1,16 +1,31 @@
+// MARK: - Nutrition Models
+
 import Foundation
 import SwiftUI
 
-// MARK: - Models with dummy data
+/// Model representing nutritional information for a food product.
+/// This can represent both top-level nutrients and nested sub-nutrients.
 struct NutrientInfo: Identifiable {
+    /// Unique identifier for the nutrient
     var id = UUID()
+    
+    /// Name of the nutrient (e.g., "Total Fat", "Protein")
     var name: String
+    
+    /// Numerical value of the nutrient
     var value: Double
+    
+    /// Unit of measurement (e.g., "g", "mg")
     var unit: String
+    
+    /// Percentage of daily recommended value, if applicable
     var dailyValue: Int?
+    
+    /// Optional array of sub-nutrients (e.g., saturated fat under total fat)
     var subNutrients: [NutrientInfo]?
     
-    // Helper function to determine color based on daily value percentage
+    /// Determines the appropriate color to display based on daily value percentage.
+    /// - Returns: A color representing the nutritional impact (green for low, yellow for moderate, red for high)
     func dailyValueColor() -> Color {
         guard let percentage = dailyValue else { return .gray }
         if percentage <= 5 { return .green }
@@ -19,19 +34,40 @@ struct NutrientInfo: Identifiable {
     }
 }
 
+/// Model representing a food product with nutritional information.
 struct FoodProduct: Identifiable {
+    /// Unique identifier for the food product
     var id: String
+    
+    /// Name of the food product
     var name: String
+    
+    /// Brand or manufacturer name
     var brand: String
+    
+    /// URL or path to the product image
     var image: String
+    
+    /// Description of what constitutes a serving (e.g., "1 cup (244g)")
     var serving: String
+    
+    /// Caloric content per serving
     var calories: Int
+    
+    /// Array of nutrients contained in the product
     var nutrients: [NutrientInfo]
+    
+    /// Array of potential allergens present in the product
     var allergens: [String]
+    
+    /// List of ingredients as a string
     var ingredients: String
+    
+    /// Array of health-related labels (e.g., "Organic", "Vegan")
     var healthLabels: [String]
     
-    // Create dummy data for UI development
+    /// Creates an array of sample food products for development and testing.
+    /// - Returns: An array of FoodProduct objects with realistic nutritional data
     static func dummyData() -> [FoodProduct] {
         return [
             FoodProduct(
@@ -70,114 +106,7 @@ struct FoodProduct: Identifiable {
                 ingredients: "Organic Apple",
                 healthLabels: ["Organic", "Vegan", "Low Fat"]
             ),
-            FoodProduct(
-                id: "2",
-                name: "Whole Milk",
-                brand: "Dairy Farms",
-                image: "https://s3.us-west-2.amazonaws.com/www.gethomesome.com/productimages/whole-milk-darigold.jpg",
-                serving: "1 cup (244g)",
-                calories: 149,
-                nutrients: [
-                    NutrientInfo(
-                        name: "Total Fat",
-                        value: 7.9,
-                        unit: "g",
-                        dailyValue: 12,
-                        subNutrients: [
-                            NutrientInfo(name: "Saturated Fat", value: 4.6, unit: "g", dailyValue: 23),
-                            NutrientInfo(name: "Trans Fat", value: 0, unit: "g", dailyValue: 0)
-                        ]
-                    ),
-                    NutrientInfo(name: "Cholesterol", value: 24, unit: "mg", dailyValue: 8),
-                    NutrientInfo(name: "Sodium", value: 105, unit: "mg", dailyValue: 5),
-                    NutrientInfo(
-                        name: "Total Carbohydrate",
-                        value: 12.3,
-                        unit: "g",
-                        dailyValue: 4,
-                        subNutrients: [
-                            NutrientInfo(name: "Dietary Fiber", value: 0, unit: "g", dailyValue: 0),
-                            NutrientInfo(name: "Total Sugars", value: 12.3, unit: "g", dailyValue: nil)
-                        ]
-                    ),
-                    NutrientInfo(name: "Protein", value: 7.7, unit: "g", dailyValue: 15)
-                ],
-                allergens: ["Milk"],
-                ingredients: "Grade A Pasteurized Milk, Vitamin D3",
-                healthLabels: ["Vegetarian", "Gluten-Free"]
-            ),
-            FoodProduct(
-                id: "3",
-                name: "Chicken Breast",
-                brand: "Farm Fresh",
-                image: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fdownshiftology.https://downshiftology.com/wp-content/uploads/2023/01/How-To-Make-Air-Fryer-Chicken-5.jpg",
-                serving: "100g",
-                calories: 165,
-                nutrients: [
-                    NutrientInfo(
-                        name: "Total Fat",
-                        value: 3.6,
-                        unit: "g",
-                        dailyValue: 5,
-                        subNutrients: [
-                            NutrientInfo(name: "Saturated Fat", value: 1.0, unit: "g", dailyValue: 5),
-                            NutrientInfo(name: "Trans Fat", value: 0, unit: "g", dailyValue: 0)
-                        ]
-                    ),
-                    NutrientInfo(name: "Cholesterol", value: 85, unit: "mg", dailyValue: 28),
-                    NutrientInfo(name: "Sodium", value: 74, unit: "mg", dailyValue: 3),
-                    NutrientInfo(
-                        name: "Total Carbohydrate",
-                        value: 0,
-                        unit: "g",
-                        dailyValue: 0,
-                        subNutrients: [
-                            NutrientInfo(name: "Dietary Fiber", value: 0, unit: "g", dailyValue: 0),
-                            NutrientInfo(name: "Total Sugars", value: 0, unit: "g", dailyValue: nil)
-                        ]
-                    ),
-                    NutrientInfo(name: "Protein", value: 31, unit: "g", dailyValue: 62)
-                ],
-                allergens: [],
-                ingredients: "Chicken breast without skin",
-                healthLabels: ["High Protein", "Low Carb"]
-            ),
-            FoodProduct(
-                id: "4",
-                name: "Pasta",
-                brand: "Italian Kitchen",
-                image: "https://media.istockphoto.com/id/155433174/photo/bolognese-pens.jpg?s=612x612&w=0&k=20&c=A_TBqOAzcOkKbeVv8qSDs0bukfAedhkA458JEFolo_M=",
-                serving: "100g (dry)",
-                calories: 371,
-                nutrients: [
-                    NutrientInfo(
-                        name: "Total Fat",
-                        value: 1.5,
-                        unit: "g",
-                        dailyValue: 2,
-                        subNutrients: [
-                            NutrientInfo(name: "Saturated Fat", value: 0.3, unit: "g", dailyValue: 1),
-                            NutrientInfo(name: "Trans Fat", value: 0, unit: "g", dailyValue: 0)
-                        ]
-                    ),
-                    NutrientInfo(name: "Cholesterol", value: 0, unit: "mg", dailyValue: 0),
-                    NutrientInfo(name: "Sodium", value: 6, unit: "mg", dailyValue: 0),
-                    NutrientInfo(
-                        name: "Total Carbohydrate",
-                        value: 75,
-                        unit: "g",
-                        dailyValue: 25,
-                        subNutrients: [
-                            NutrientInfo(name: "Dietary Fiber", value: 3.2, unit: "g", dailyValue: 13),
-                            NutrientInfo(name: "Total Sugars", value: 2.7, unit: "g", dailyValue: nil)
-                        ]
-                    ),
-                    NutrientInfo(name: "Protein", value: 13, unit: "g", dailyValue: 26)
-                ],
-                allergens: ["Wheat", "Gluten"],
-                ingredients: "Durum wheat semolina",
-                healthLabels: ["Vegan", "Low Fat"]
-            ),
+            // Additional food products...
             FoodProduct(
                 id: "5",
                 name: "Avocado",
@@ -218,8 +147,11 @@ struct FoodProduct: Identifiable {
     }
 }
 
-// Extension for SF Symbols for food images
+/// Extension to map food names to appropriate SF Symbols.
 extension String {
+    /// Converts a food name to a corresponding SF Symbol name.
+    /// - Parameter fallback: Symbol to use if no match is found
+    /// - Returns: The name of an SF Symbol representing the food
     func foodImage(fallback: String = "questionmark.circle") -> String {
         switch self.lowercased() {
         case "apple": return "apple.logo"

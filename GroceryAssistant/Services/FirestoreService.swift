@@ -2,13 +2,30 @@ import FirebaseFirestore
 import FirebaseAuth
 import Foundation
 
+/// A service struct that provides methods for interacting with Firestore database.
+/// This service handles all database operations related to users, shopping lists,
+/// items, categories, reminders, and purchases.
 struct FirestoreService {
+    /// The Firestore database instance used for all operations
     private static let db = Firestore.firestore()
     
+    // MARK: - User Operations
+    
+    /// Saves user data to the Firestore database.
+    ///
+    /// - Parameters:
+    ///   - uid: The user's unique identifier
+    ///   - data: A dictionary containing user data to save
+    /// - Throws: Firestore errors if the save operation fails
     static func saveUserData(uid: String, data: [String: Any]) async throws {
         try await db.collection("users").document(uid).setData(data)
     }
     
+    /// Retrieves user data from the Firestore database.
+    ///
+    /// - Parameter uid: The user's unique identifier
+    /// - Throws: AuthError.notAuthenticated if user data is not found
+    /// - Returns: A dictionary containing the user's data
     static func getUserData(uid: String) async throws -> [String: Any] {
           let db = Firestore.firestore()
           let document = try await db.collection("users").document(uid).getDocument()
@@ -20,6 +37,14 @@ struct FirestoreService {
           return data
       }
     
+    // MARK: - Shopping List Operations
+    
+    /// Creates a new shopping list for the specified user.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - list: The ShoppingList object to store
+    /// - Throws: Firestore errors if the creation fails
     static func createList(userId: String, list: ShoppingList) async throws {
         let listWithDate = list.toDictionary() // Convert to [String: Any]
         try await db.collection("users")
@@ -29,6 +54,11 @@ struct FirestoreService {
             .setData(listWithDate)
     }
     
+    /// Retrieves all shopping lists for the specified user.
+    ///
+    /// - Parameter userId: The user's unique identifier
+    /// - Throws: Firestore errors if the retrieval fails
+    /// - Returns: An array of ShoppingList objects
     static func getUserLists(userId: String) async throws -> [ShoppingList] {
         let snapshot = try await db.collection("users")
             .document(userId)
@@ -40,6 +70,13 @@ struct FirestoreService {
         }
     }
     
+    /// Retrieves a specific shopping list by its ID.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - listId: The ID of the shopping list to retrieve
+    /// - Throws: NSError with code 404 if the list is not found
+    /// - Returns: The requested ShoppingList object
     static func getListById(userId: String, listId: String) async throws -> ShoppingList {
         let documentSnapshot = try await db.collection("users")
             .document(userId)
@@ -54,6 +91,15 @@ struct FirestoreService {
         return list
     }
     
+    // MARK: - Shopping Item Operations
+    
+    /// Retrieves all items in a specific shopping list.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - listId: The ID of the shopping list
+    /// - Throws: Firestore errors if the retrieval fails
+    /// - Returns: An array of ShoppingItem objects
     static func getListItems(userId: String, listId: String) async throws -> [ShoppingItem] {
         let querySnapshot = try await db.collection("users")
             .document(userId)
@@ -66,6 +112,11 @@ struct FirestoreService {
         }
     }
     
+    /// Retrieves all shopping items across all lists for the specified user.
+    ///
+    /// - Parameter userId: The user's unique identifier
+    /// - Throws: Firestore errors if the retrieval fails
+    /// - Returns: An array of ShoppingItem objects
     static func getAllItems(userId: String) async throws -> [ShoppingItem] {
         let querySnapshot = try await db.collection("users")
             .document(userId)
@@ -77,6 +128,14 @@ struct FirestoreService {
         }
     }
     
+    /// Toggles the checked state of a shopping item and updates the list's completed items count.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - itemId: The ID of the item to update
+    ///   - isChecked: The new checked state
+    ///   - listId: The ID of the shopping list containing the item
+    /// - Throws: Firestore errors if the update fails
     static func toggleItemChecked(userId: String, itemId: String, isChecked: Bool, listId: String) async throws {
         let userRef = db.collection("users").document(userId)
         let itemRef = userRef.collection("items").document(itemId)
@@ -96,6 +155,13 @@ struct FirestoreService {
         ])
     }
     
+    /// Updates a shopping item with the specified changes.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - itemId: The ID of the item to update
+    ///   - updates: A dictionary containing the fields to update and their new values
+    /// - Throws: NSError with code 404 if the item is not found
     static func updateItem(userId: String, itemId: String, updates: [String: Any]) async throws {
         var updatedData = updates
         updatedData["updatedDate"] = FieldValue.serverTimestamp()
@@ -110,17 +176,25 @@ struct FirestoreService {
         
         if !docSnapshot.exists {
             print("WARNING: Document with ID \(itemId) does not exist in Firestore!")
-            // You could implement alternative lookup logic here if needed
             
-            // For now, throw an error
+            // throw an error
             throw NSError(domain: "FirestoreService", code: 404,
                          userInfo: [NSLocalizedDescriptionKey: "Item with ID \(itemId) not found"])
         }
         
-        // If we get here, the document exists, so proceed with the update
+        // The document exists, so proceed with the update
         try await docRef.updateData(updatedData)
     }
     
+    /// Creates a new shopping item and adds it to a list.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - item: The ShoppingItem object to create
+    ///   - listId: The ID of the shopping list to add the item to
+    ///   - categoryId: Optional category ID to associate with the item
+    /// - Throws: Firestore errors if the creation fails or NSError if retrieval fails
+    /// - Returns: The created ShoppingItem with server-generated timestamps
     static func createItem(userId: String, item: ShoppingItem, listId: String, categoryId: String?) async throws -> ShoppingItem {
         let userRef = db.collection("users").document(userId)
         let itemsCollection = userRef.collection("items")
@@ -154,7 +228,16 @@ struct FirestoreService {
 
         return createdItem
     }
+
+    // MARK: - Category Operations
     
+    /// Finds an existing category by name or creates a new one if it doesn't exist.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - categoryName: The name of the category to find or create
+    /// - Throws: Firestore errors if the operation fails
+    /// - Returns: The found or created ShoppingCategory  
     static func findOrCreateCategory(userId: String, categoryName: String) async throws -> ShoppingCategory {
         // Check if category exists
         let querySnapshot = try await db.collection("users")
@@ -189,7 +272,40 @@ struct FirestoreService {
         return newCategory
     }
 
-      // Get all reminders for a user
+    /// Retrieves all categories for the specified user.
+    ///
+    /// - Parameter userId: The user's unique identifier
+    /// - Throws: Firestore errors if the retrieval fails
+    /// - Returns: An array of ShoppingCategory objects sorted by name
+    static func getUserCategories(userId: String) async throws -> [ShoppingCategory] {
+        let querySnapshot = try await db.collection("users")
+            .document(userId)
+            .collection("categories")
+            .order(by: "name")
+            .getDocuments()
+        
+        return querySnapshot.documents.compactMap { document in
+            // Get the document data
+            let data = document.data()
+            
+            // Extract the name from the data
+            guard let name = data["name"] as? String else { return nil }
+            
+            // Create a ShoppingCategory object
+            return ShoppingCategory(
+                id: document.documentID,
+                name: name
+            )
+        }
+    }
+
+    // MARK: - Reminder Operations
+    
+    /// Retrieves all reminders for the specified user.
+    ///
+    /// - Parameter userId: The user's unique identifier
+    /// - Throws: Firestore errors or NSError if data format is invalid
+    /// - Returns: An array of ShoppingReminder objects
     static func getReminders(userId: String) async throws -> [ShoppingReminder] {
         let snapshot = try await db.collection("users")
             .document(userId)
@@ -236,11 +352,16 @@ struct FirestoreService {
         }
     }
     
-    // Save a new reminder
+    /// Saves a new reminder to the Firestore database.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - reminder: The ShoppingReminder object to save
+    /// - Throws: Firestore errors if the save operation fails
     static func saveReminder(userId: String, reminder: ShoppingReminder) async throws {
         var reminderData = reminder.toDictionary()
         
-        // Ensure date is stored as a Timestamp
+        // Date is stored as a Timestamp
         reminderData["date"] = Timestamp(date: reminder.date)
         reminderData["createdAt"] = FieldValue.serverTimestamp()
         reminderData["updatedAt"] = FieldValue.serverTimestamp()
@@ -252,7 +373,13 @@ struct FirestoreService {
             .setData(reminderData)
     }
     
-    // Update a reminder's active status
+    /// Updates a reminder's active status.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - reminderId: The ID of the reminder to update
+    ///   - isActive: The new active status
+    /// - Throws: Firestore errors if the update fails
     static func updateReminder(userId: String, reminderId: String, isActive: Bool) async throws {
         try await db.collection("users")
             .document(userId)
@@ -264,7 +391,12 @@ struct FirestoreService {
             ])
     }
     
-    // Delete a reminder
+    /// Deletes a reminder from the Firestore database.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - reminderId: The ID of the reminder to delete
+    /// - Throws: Firestore errors if the deletion fails
     static func deleteReminder(userId: String, reminderId: String) async throws {
         try await db.collection("users")
             .document(userId)
@@ -273,6 +405,15 @@ struct FirestoreService {
             .delete()
     }
     
+    // MARK: - Purchase Operations
+    
+    /// Saves purchased items to the Firestore database.
+    ///
+    /// - Parameters:
+    ///   - userId: The user's unique identifier
+    ///   - purchaseId: The ID of the purchase
+    ///   - items: An array of ShoppingItem objects that were purchased
+    /// - Throws: Firestore errors if the save operation fails
     static func savePurchaseItems(userId: String, purchaseId: String, items: [ShoppingItem]) async throws {
         let batch = db.batch()
         
@@ -291,7 +432,15 @@ struct FirestoreService {
         try await batch.commit()
     }
     
-    // Helper extension for ShoppingItem
+    /// Creates a new purchase record from a shopping list.
+    ///
+    /// - Parameters:
+    ///   - list: The ShoppingList that items were purchased from
+    ///   - items: An array of ShoppingItem objects that were purchased
+    ///   - store: The name of the store where items were purchased
+    ///   - totalSpent: The total amount spent on the purchase
+    /// - Throws: AuthError.notAuthenticated if no user is signed in, or Firestore errors
+    /// - Returns: The created Purchase object
     static func createPurchaseFromList(list: ShoppingList, items: [ShoppingItem], store: String, totalSpent: Double) async throws -> Purchase {
         guard let userId = Auth.auth().currentUser?.uid else {
             throw AuthError.notAuthenticated
@@ -317,6 +466,12 @@ struct FirestoreService {
         return purchase
     }
     
+    // MARK: - Shop Operations
+    
+    /// Retrieves all available items for purchase from the shop.
+    ///
+    /// - Throws: Firestore errors if the retrieval fails
+    /// - Returns: An array of Buy objects representing available items
     static func getBuyItems() async throws -> [Buy] {
         let snapshot = try await db.collection("shop").getDocuments()
         
@@ -346,28 +501,5 @@ struct FirestoreService {
         }
         
         return buyItems
-    }
-    
-    // Get all categories for a user
-    static func getUserCategories(userId: String) async throws -> [ShoppingCategory] {
-        let querySnapshot = try await db.collection("users")
-            .document(userId)
-            .collection("categories")
-            .order(by: "name")
-            .getDocuments()
-        
-        return querySnapshot.documents.compactMap { document in
-            // Get the document data
-            let data = document.data()
-            
-            // Extract the name from the data
-            guard let name = data["name"] as? String else { return nil }
-            
-            // Create a ShoppingCategory object
-            return ShoppingCategory(
-                id: document.documentID,
-                name: name
-            )
-        }
     }
 }
