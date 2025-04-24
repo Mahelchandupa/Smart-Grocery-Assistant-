@@ -1,12 +1,15 @@
-//
-//  ContentView.swift
-//  GroceryAssistant
-
 import SwiftUI
 
+/// The main container view of the application that handles authentication state
+/// and manages tab navigation for the authenticated experience.
 struct ContentView: View {
-    @State private var selectedTab = 2 // Start with Home tab selected
+    /// The currently selected tab index, starting with Home (index 2)
+    @State private var selectedTab = 2
+
+    /// Navigation path for handling deep linking and navigation between views
     @State private var navPath = NavigationPath()
+
+    /// Authentication manager to determine if the user is signed in
     @EnvironmentObject var authManager: AuthManager
     
     var body: some View {
@@ -39,12 +42,12 @@ struct ContentView: View {
         }
     }
     
-    // Extract the main app view with tabs to keep code clean
+    /// The main authenticated app view with tabs and navigation
     private var mainAppView: some View {
-        // Here's the key change - we need a better way to manage the tab and navigation state
+        // Uses ZStack to position the tab bar outside the NavigationStack
         ZStack(alignment: .bottom) {
             NavigationStack(path: $navPath) {
-                // This wraps the actual content that will display navigation destinations
+                // TabView to manage switching between main app sections
                 TabView(selection: $selectedTab) {
                     NutritionalInfoView(navPath: $navPath)
                         .tag(0)
@@ -67,7 +70,7 @@ struct ContentView: View {
                 }
             }
             
-            // The tab bar is now outside the NavigationStack but inside the ZStack
+            // The tab bar is outside the NavigationStack but inside the ZStack
             // This ensures it's always visible at the bottom
             if navPath.isEmpty {
                 CustomTabBar(selectedTab: $selectedTab)
@@ -76,7 +79,9 @@ struct ContentView: View {
         }
     }
     
-    // Extract navigation destination logic to a separate function for clarity
+    /// Creates the appropriate view based on the navigation route
+    /// - Parameter route: The route to navigate to
+    /// - Returns: The destination view for the specified route
     @ViewBuilder
     private func destinationView(for route: Route) -> some View {
         switch route {
@@ -111,8 +116,9 @@ struct ContentView: View {
     }
 }
 
-// Custom tab bar view - unchanged
+/// Custom tab bar for the main application navigation
 struct CustomTabBar: View {
+    /// The currently selected tab index, bound to the parent view
     @Binding var selectedTab: Int
     
     var body: some View {
@@ -154,17 +160,23 @@ struct CustomTabBar: View {
         )
     }
     
+    /// Returns the SF Symbol name for the given tab index
+    /// - Parameter index: The tab index
+    /// - Returns: SF Symbol name as a string
     func getIconName(for index: Int) -> String {
         switch index {
-        case 0: return "leaf"              // Nutritional
-        case 1: return "mappin.and.ellipse"          // Locator
-        case 2: return "house"             // Home
-        case 3: return "list.bullet"       // Item Lists
-        case 4: return "calendar"          // Reminders
+        case 0: return "leaf"                // Nutritional
+        case 1: return "mappin.and.ellipse"  // Locator
+        case 2: return "house"               // Home
+        case 3: return "list.bullet"         // Item Lists
+        case 4: return "calendar"            // Reminders
         default: return "questionmark"
         }
     }
     
+    /// Returns the display name for the given tab index
+    /// - Parameter index: The tab index
+    /// - Returns: Tab name as a string
     func getTabName(for index: Int) -> String {
         switch index {
         case 0: return "Nutritional"
@@ -177,16 +189,7 @@ struct CustomTabBar: View {
     }
 }
 
-struct CustomShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: [.topLeft, .topRight],
-            cornerRadii: CGSize(width: 30, height: 30)
-        )
-        return Path(path.cgPath)
-    }
-}
+/// Preview provider for ContentView
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
