@@ -1,24 +1,5 @@
-//
-//  GroceryAssistantApp.swift
-//  GroceryAssistant
-//
-//  Created by sasiri rukshan nanayakkara on 3/30/25.
-//
-
 import SwiftUI
 import Firebase
-
-//@main
-//struct GroceryAssistantApp: App {
-//    init(){
-//        FirebaseApp.configure()
-//    }
-//    var body: some Scene {
-//        WindowGroup {
-//            ContentView()
-//        }
-//    }
-//}
 
 class AppState: ObservableObject {
     @Published var isInitialized = false

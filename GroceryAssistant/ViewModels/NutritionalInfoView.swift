@@ -1,15 +1,37 @@
 import SwiftUI
 
+/// A view that displays detailed nutritional information for food products.
+///
+/// This view allows users to select products from a dropdown menu or search,
+/// and displays comprehensive nutritional information including calories,
+/// nutrients, allergens, and ingredients.
 struct NutritionalInfoView: View {
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
+    
+    /// Authentication manager for user context
     @EnvironmentObject var authManager: AuthManager
+    
+    /// Sample product data for demonstration
     @State private var dummyProducts = FoodProduct.dummyData()
+    
+    /// Currently selected product to display details for
     @State private var selectedProduct: FoodProduct?
+    
+    /// User's search query when looking for products
     @State private var searchQuery = ""
+    
+    /// Flag controlling the visibility of the product dropdown
     @State private var showDropdown = false
+    
+    /// Flag controlling the visibility of search results
     @State private var showSearchResults = false
+    
+    /// Flag controlling the display of the error banner
     @State private var showErrorBanner = false
 
+    /// Initializes the view with a navigation path and preselects the first product
+    /// - Parameter navPath: Binding to the navigation path
     init(navPath: Binding<NavigationPath>) {
         self._navPath = navPath
         self._selectedProduct = State(initialValue: FoodProduct.dummyData().first)
@@ -22,26 +44,27 @@ struct NutritionalInfoView: View {
             headerView
             
             ScrollView {
-
-                    // Product selection dropdown
-                    productSelectionSection
-                    
-                    // Error message banner (toggle for demo)
-                    if showErrorBanner {
-                        errorBanner(message: "Could not connect to nutrition database. Showing estimates.")
-                    }
-                    
-                    // Product details or no selection view
-                    if let product = selectedProduct {
-                        productDetailsView(product: product)
-                    } else {
-                        noSelectionView
-                    }
+                // Product selection dropdown
+                productSelectionSection
+                
+                // Error message banner (toggle for demo)
+                if showErrorBanner {
+                    errorBanner(message: "Could not connect to nutrition database. Showing estimates.")
+                }
+                
+                // Product details or no selection view
+                if let product = selectedProduct {
+                    productDetailsView(product: product)
+                } else {
+                    noSelectionView
+                }
             }
         }
     }
     
-    // Header view
+    // MARK: - Header Components
+    
+    /// Header view with navigation and title
     private var headerView: some View {
         ZStack {
             Color(hex: "4CAF50")
@@ -75,6 +98,8 @@ struct NutritionalInfoView: View {
     }
     
     // MARK: - Product Selection Section
+    
+    /// Section for selecting a product via dropdown
     private var productSelectionSection: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
@@ -114,7 +139,6 @@ struct NutritionalInfoView: View {
                             
                             TextField("Search for a product...", text: $searchQuery)
                                 .onChange(of: searchQuery) { newValue in
-                                    // For demo purposes only
                                     showSearchResults = !newValue.isEmpty
                                 }
                             
@@ -153,7 +177,9 @@ struct NutritionalInfoView: View {
         }
     }
     
-    // MARK: - Lists
+    // MARK: - List Components
+    
+    /// List showing search results based on user query
     private var searchResultsList: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -206,6 +232,7 @@ struct NutritionalInfoView: View {
         }
     }
     
+    /// List showing user's previously viewed ingredients
     private var userItemsList: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("YOUR INGREDIENTS")
@@ -246,6 +273,10 @@ struct NutritionalInfoView: View {
     }
     
     // MARK: - Error Banner
+    
+    /// Creates an error banner with the specified message
+    /// - Parameter message: The error message to display
+    /// - Returns: A styled view containing the error message
     private func errorBanner(message: String) -> some View {
         HStack {
             Image(systemName: "info.circle")
@@ -259,7 +290,9 @@ struct NutritionalInfoView: View {
         .background(Color.yellow.opacity(0.2))
     }
     
-    // MARK: - No Selection View
+    // MARK: - Empty State View
+    
+    /// View displayed when no product is selected
     private var noSelectionView: some View {
         VStack(spacing: 16) {
             Image(systemName: "fork.knife")
@@ -288,7 +321,11 @@ struct NutritionalInfoView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // MARK: - Product Details View
+    // MARK: - Product Details Components
+    
+    /// Main view displaying product nutritional details
+    /// - Parameter product: The food product to display details for
+    /// - Returns: A view containing formatted nutritional information
     private func productDetailsView(product: FoodProduct) -> some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -321,6 +358,9 @@ struct NutritionalInfoView: View {
         }
     }
     
+    /// Header view displaying product image, name, brand and health labels
+    /// - Parameter product: The food product to display
+    /// - Returns: A styled header view
     private func productHeaderView(product: FoodProduct) -> some View {
         HStack(alignment: .top, spacing: 16) {
             // Product image (using SF Symbols as placeholders)
@@ -387,6 +427,9 @@ struct NutritionalInfoView: View {
         .padding(.horizontal)
     }
     
+    /// Warning view for food allergens
+    /// - Parameter allergens: Array of allergen names
+    /// - Returns: A styled warning view
     private func allergenWarningView(allergens: [String]) -> some View {
         HStack {
             Image(systemName: "exclamationmark.triangle")
@@ -404,6 +447,9 @@ struct NutritionalInfoView: View {
         .padding(.horizontal)
     }
     
+    /// Nutrition facts table view
+    /// - Parameter product: The food product to display nutrition for
+    /// - Returns: A styled nutrition facts table
     private func nutritionFactsView(product: FoodProduct) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
@@ -449,6 +495,9 @@ struct NutritionalInfoView: View {
         .padding(.horizontal)
     }
     
+    /// Row view for a nutrient with optional sub-nutrients
+    /// - Parameter nutrient: The nutrient information to display
+    /// - Returns: A styled row view
     private func nutrientRow(nutrient: NutrientInfo) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             // Main nutrient
@@ -501,6 +550,9 @@ struct NutritionalInfoView: View {
         .background(Color.white)
     }
     
+    /// Ingredients list view
+    /// - Parameter ingredients: String containing ingredients list
+    /// - Returns: A styled ingredients view
     private func ingredientsView(ingredients: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Ingredients")
@@ -520,6 +572,7 @@ struct NutritionalInfoView: View {
     }
 }
 
+/// Preview provider for NutritionalInfoView
 struct NutritionalInfoView_Previews: PreviewProvider {
     static var previews: some View {
         NutritionalInfoView(navPath: .constant(NavigationPath()))

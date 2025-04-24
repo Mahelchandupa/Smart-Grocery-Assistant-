@@ -1,23 +1,46 @@
-//
-//  SignInView.swift
-//  GroceryAssistant
-
 import SwiftUI
 import LocalAuthentication
 
+/// A view that handles user authentication by presenting a sign-in form.
+///
+/// This view allows users to sign in with their email and password, or with biometric
+/// authentication if available and previously configured. It includes form validation,
+/// "remember me" functionality, and navigation to sign up.
 struct SignInView: View {
+    /// Authentication manager for handling sign-in operations
     @EnvironmentObject var authManager: AuthManager
+    
+    /// Navigation path for handling navigation between views
     @Binding var navPath: NavigationPath
 
+    /// User's email input
     @State private var email: String = ""
+    
+    /// User's password input
     @State private var password: String = ""
+    
+    /// Flag controlling password visibility
     @State private var showPassword: Bool = false
+    
+    /// Flag for "remember me" option to enable biometric login
     @State private var rememberMe: Bool = false
+    
+    /// Error message for email validation
     @State private var emailError: String? = nil
+    
+    /// Error message for password validation
     @State private var passwordError: String? = nil
+    
+    /// Type of biometric authentication available on the device
     @State private var biometricType: BiometricType = .none
+    
+    /// Whether biometric login is enabled for this user
     @State private var biometricsEnabled: Bool = false
+    
+    /// Whether biometric authentication is available on the device
     @State private var biometricsAvailable: Bool = false
+    
+    /// Flag indicating whether a sign-in operation is in progress
     @State private var isLoading = false
     
     var body: some View {
@@ -44,7 +67,7 @@ struct SignInView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    // Logo
+                    // Logo and title
                     VStack(spacing: 12) {
                         Circle()
                             .fill(Color.green.opacity(0.2))
@@ -66,7 +89,7 @@ struct SignInView: View {
                     .padding(.bottom, 16)
                     .padding(.top, 16)
                     
-                    // Biometric Auth
+                    // Biometric authentication button (if available)
                     if biometricsAvailable && biometricsEnabled {
                         Button(action: authenticateWithBiometrics) {
                             HStack {
@@ -86,17 +109,17 @@ struct SignInView: View {
                         .padding(.bottom, 8)
                     }
                     
-                    // Form
+                    // Sign-in form
                     VStack(spacing: 20) {
-                        // Email Field
+                        // Email field
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Email")
                                 .fontWeight(.medium)
                             
                             TextField("Enter your email", text: $email)
-//                                .keyboardType(.emailAddress)
-//                                .autocapitalization(.none)
-//                                .disableAutocorrection(true)
+                               .keyboardType(.emailAddress)
+                               .autocapitalization(.none)
+                               .disableAutocorrection(true)
                                 .padding()
                                 .background(Color(.systemGray6))
                                 .cornerRadius(10)
@@ -113,7 +136,7 @@ struct SignInView: View {
                             }
                         }
                         
-                        // Password Field
+                        // Password field with show/hide toggle
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Password")
                                 .fontWeight(.medium)
@@ -121,12 +144,12 @@ struct SignInView: View {
                             HStack {
                                 if showPassword {
                                     TextField("Enter your password", text: $password)
-//                                        .autocapitalization(.none)
-//                                        .disableAutocorrection(true)
+                                       .autocapitalization(.none)
+                                       .disableAutocorrection(true)
                                 } else {
                                     SecureField("Enter your password", text: $password)
-//                                        .autocapitalization(.none)
-//                                        .disableAutocorrection(true)
+                                       .autocapitalization(.none)
+                                       .disableAutocorrection(true)
                                 }
                                 
                                 Button(action: {
@@ -152,7 +175,7 @@ struct SignInView: View {
                             }
                         }
                         
-                        // Remember Me and Forgot Password
+                        // Remember me checkbox and forgot password link
                         HStack {
                             Button(action: {
                                 rememberMe.toggle()
@@ -207,15 +230,15 @@ struct SignInView: View {
                     
                     Spacer()
                     
-                    // Create Account Link
+                    // Sign Up link
                     HStack {
                         Text("Don't have an account?")
                             .foregroundColor(.gray)
                         
                         Button(action: {
-                        // Navigate to signup
-                        navPath.append(Route.signUp)
-                    }       ) {
+                            // Navigate to signup
+                            navPath.append(Route.signUp)
+                        }) {
                             Text("Sign Up")
                                 .fontWeight(.medium)
                                 .foregroundColor(.green)
@@ -232,6 +255,12 @@ struct SignInView: View {
         .navigationBarHidden(true)
     }
     
+    // MARK: - Biometric Authentication
+    
+    /// Determines the type of biometric authentication available on the device.
+    ///
+    /// This method checks whether Face ID or Touch ID is available and sets
+    /// the appropriate biometric type.
     private func checkBiometricType() {
         let context = LAContext()
         var error: NSError?
@@ -253,6 +282,10 @@ struct SignInView: View {
         }
     }
     
+    /// Checks if biometric authentication is enabled for the current user.
+    ///
+    /// This method determines both the availability of biometrics on the device
+    /// and whether the user has previously stored credentials for biometric login.
     private func checkBiometricsEnabled() {
          // Check if biometrics is available on the device
          let context = LAContext()
@@ -281,6 +314,13 @@ struct SignInView: View {
          }
      }
     
+    // MARK: - Form Handling
+    
+    /// Validates form inputs and initiates the sign-in process.
+    ///
+    /// This method performs validation on the email and password fields,
+    /// displays appropriate error messages, and calls the authentication
+    /// manager to sign in the user if validation passes.
     private func handleSignIn() {
         // Reset errors
         emailError = nil
@@ -304,46 +344,53 @@ struct SignInView: View {
         }
         
         if isValid {
-                    isLoading = true
-                    
-                    let request = SignInRequest(
-                        email: email,
-                        password: password,
-                        rememberMe: rememberMe
-                    )
-                    
-                    authManager.signIn(with: request) { success, error in
-                        isLoading = false
-                        
-                        if success {
-                            // Successfully signed in
-                            // The auth state listener in AuthManager will update isAuthenticated
-                            // and trigger a navigation to the main app
-                        } else if let error = error {
-                            // Show error to user
-                            if error.contains("email") {
-                                emailError = error
-                            } else if error.contains("password") {
-                                passwordError = error
-                            }
-                        }
+            isLoading = true
+            
+            let request = SignInRequest(
+                email: email,
+                password: password,
+                rememberMe: rememberMe
+            )
+            
+            authManager.signIn(with: request) { success, error in
+                isLoading = false
+                
+                if success {
+                    // Successfully signed in
+                    // The auth state listener in AuthManager will update isAuthenticated
+                    // and trigger a navigation to the main app
+                } else if let error = error {
+                    // Show error to user
+                    if error.contains("email") {
+                        emailError = error
+                    } else if error.contains("password") {
+                        passwordError = error
                     }
                 }
+            }
+        }
     }
     
+    /// Initiates biometric authentication if available.
+    ///
+    /// This method uses the AuthManager to authenticate the user with Face ID or Touch ID,
+    /// and navigates to the home screen on success.
     private func authenticateWithBiometrics() {
-           // Use the AuthManager's biometric authentication
-           authManager.authenticateWithBiometrics { success, error in
-               if success {
-                   // If authentication is successful, navigate to home
-                   navPath.append(Route.home)
-               } else if let error = error {
-                   // Display the error to the user
-                   authManager.authError = error
-               }
-           }
-       }
+        // Use the AuthManager's biometric authentication
+        authManager.authenticateWithBiometrics { success, error in
+            if success {
+                // If authentication is successful, navigate to home
+                navPath.append(Route.home)
+            } else if let error = error {
+                // Display the error to the user
+                authManager.authError = error
+            }
+        }
+    }
     
+    /// Validates if a string is a properly formatted email address.
+    /// - Parameter email: The email string to validate
+    /// - Returns: True if the email format is valid, false otherwise
     private func isValidEmail(_ email: String) -> Bool {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)

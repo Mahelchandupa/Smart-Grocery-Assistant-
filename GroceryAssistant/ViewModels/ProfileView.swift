@@ -2,22 +2,45 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
+/// A view that displays the user's profile information and account settings.
+///
+/// This view allows users to view their personal information, toggle biometric login,
+/// access help and support, and log out of the application.
 struct ProfileView: View {
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
+    
+    /// Environment value for dismissing the view
     @Environment(\.dismiss) private var dismiss
+    
+    /// Toggle state for biometric login
     @State private var biometricLogin = true
+    
+    /// Toggle state for showing/hiding personal information
     @State private var showPersonalInfo = false
+    
+    /// Authentication manager for user context and sign-out functionality
     @EnvironmentObject var authManager: AuthManager
     
+    /// Flag indicating whether a logout error alert is being shown
     @State private var showingLogoutError = false
+    
+    /// Error message to display in the logout error alert
     @State private var logoutErrorMessage = ""
     
-    // User state
+    // MARK: - User State
+    
+    /// The current user's profile data
     @State private var user: User?
+    
+    /// Flag indicating whether user data is being loaded
     @State private var isLoading = true
+    
+    /// Error message if user data fails to load
     @State private var errorMessage: String?
     
-    // Initialize with empty user and fetch data on appear
+    /// Initializes the view with a navigation path
+    /// - Parameter navPath: Binding to the navigation path
     init(navPath: Binding<NavigationPath>) {
         self._navPath = navPath
     }
@@ -103,7 +126,9 @@ struct ProfileView: View {
         }
     }
     
-    // Fetch user data from Firebase
+    // MARK: - Data Fetching
+    
+    /// Fetches the current user's data from Firebase
     private func fetchUserData() async {
         isLoading = true
         errorMessage = nil
@@ -133,7 +158,9 @@ struct ProfileView: View {
         }
     }
     
-    // Format timestamp to readable date
+    /// Formats a Firestore timestamp into a readable date string
+    /// - Parameter timestamp: The Firestore timestamp to format
+    /// - Returns: A formatted date string
     private func formatMemberSince(_ timestamp: Timestamp?) -> String {
         guard let timestamp = timestamp else {
             return "Unknown"
@@ -148,7 +175,7 @@ struct ProfileView: View {
     
     // MARK: - Component Views
     
-    // Header view
+    /// Header view with navigation and title
     private var headerView: some View {
         ZStack {
             Color(hex: "4CAF50")
@@ -179,7 +206,9 @@ struct ProfileView: View {
         .frame(height: 120)
     }
     
-    // Profile card view
+    /// Card view displaying user profile information
+    /// - Parameter user: The user to display profile information for
+    /// - Returns: A styled card view with the user's avatar and basic info
     private func profileCardView(for user: User) -> some View {
         VStack(alignment: .leading) {
             HStack(spacing: 16) {
@@ -214,7 +243,9 @@ struct ProfileView: View {
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
     
-    // Account settings view
+    /// Section for account settings options
+    /// - Parameter user: The user whose settings should be displayed
+    /// - Returns: A card view with account setting options
     private func accountSettingsView(for user: User) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Account Settings")
@@ -235,7 +266,9 @@ struct ProfileView: View {
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
     
-    // Personal info dropdown section
+    /// Expandable section showing personal information details
+    /// - Parameter user: The user whose personal info should be displayed
+    /// - Returns: An expandable section view with personal information
     private func personalInfoSection(for user: User) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: {
@@ -280,7 +313,9 @@ struct ProfileView: View {
         }
     }
     
-    // Biometric login toggle section
+    /// Toggle section for enabling or disabling biometric login
+    /// - Parameter user: The user whose biometric setting should be displayed
+    /// - Returns: A toggle section for biometric login
     private func biometricLoginSection(for user: User) -> some View {
         HStack {
             Image(systemName: "key.fill")
@@ -296,8 +331,6 @@ struct ProfileView: View {
                 get: { self.biometricLogin },
                 set: { newValue in
                     self.biometricLogin = newValue
-                    // Here you would typically update the user's preferences in Firestore
-                    // For example: Task { try? await updateUserBiometricPreference(userId: user.id, enabled: newValue) }
                 }
             ))
             .labelsHidden()
@@ -311,7 +344,7 @@ struct ProfileView: View {
         }
     }
     
-    // Help and support view
+    /// Section showing help and support options
     private var helpAndSupportView: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Help & Support")
@@ -364,7 +397,7 @@ struct ProfileView: View {
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
     
-    // Logout button
+    /// Button that logs the user out of the application
     private var logoutButton: some View {
         Button(action: {
             do {
@@ -392,7 +425,11 @@ struct ProfileView: View {
         .padding(.bottom, 16)
     }
     
-    // Helper function for information rows
+    /// Creates a row displaying a labeled piece of information
+    /// - Parameters:
+    ///   - label: The label text (e.g., "First Name:")
+    ///   - value: The value to display
+    /// - Returns: A formatted row with label and value
     private func infoRow(label: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 4) {
             Text(label)
@@ -407,7 +444,7 @@ struct ProfileView: View {
     }
 }
 
-// Preview provider
+/// Preview provider for ProfileView
 struct ProfileView_Previews: PreviewProvider {
     static var previews: some View {
         ProfileView(navPath: .constant(NavigationPath()))

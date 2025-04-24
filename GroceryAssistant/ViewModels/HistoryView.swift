@@ -2,22 +2,35 @@ import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 
-// Main History View
+/// A view that displays the user's shopping history, focusing on past purchases.
+///
+/// This view shows a list of completed shopping trips, with details like
+/// date, store name, total spent, and number of items. Users can tap on a purchase
+/// to see more detailed information.
 struct HistoryView: View {
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
+    
+    /// View model that handles data fetching and business logic
     @StateObject private var viewModel = HistoryViewModel()
+    
+    /// Authentication manager for user context
     @EnvironmentObject var authManager: AuthManager
+    
+    /// Currently active tab in the view
     @State private var activeTab = "purchases"
+    
+    /// Presentation mode for dismissing the view
     @Environment(\.presentationMode) var presentationMode
     
-    // Date formatter for display
+    /// Date formatter configured for displaying purchase dates
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, yyyy"
         return formatter
     }()
     
-    // Currency formatter
+    /// Currency formatter for displaying monetary values
     private let currencyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
@@ -29,7 +42,7 @@ struct HistoryView: View {
         ZStack {
             
             VStack(spacing: 0) {
-                // Header
+                // Custom navigation header
                 ZStack {
                     Color(hex: "4CAF50")
                         .ignoresSafeArea(edges: .top)
@@ -63,7 +76,7 @@ struct HistoryView: View {
                 .padding(.bottom, 20)
                 
                 VStack(spacing: 0) {
-                    // Tab Navigation
+                    // Tab navigation for different history sections
                     HStack {
                         Button(action: {
                             activeTab = "purchases"
@@ -86,16 +99,19 @@ struct HistoryView: View {
                     .padding(.horizontal)
                     .background(Color.white)
                     
-                    // Content area
+                    // Content area showing purchases with different states
                     ScrollView {
                         if viewModel.isLoading {
+                            // Loading state
                             ProgressView()
                                 .padding()
                         } else if let errorMessage = viewModel.errorMessage {
+                            // Error state
                             Text(errorMessage)
                                 .foregroundColor(.red)
                                 .padding()
                         } else if viewModel.recentPurchases.isEmpty {
+                            // Empty state
                             VStack(spacing: 16) {
                                 Image(systemName: "bag")
                                     .font(.system(size: 60))
@@ -112,6 +128,7 @@ struct HistoryView: View {
                             }
                             .padding(.top, 100)
                         } else {
+                            // Content state - list of purchases
                             LazyVStack(spacing: 16) {
                                 ForEach(viewModel.recentPurchases) { purchase in
                                     PurchaseCard(purchase: purchase, dateFormatter: dateFormatter, currencyFormatter: currencyFormatter)
@@ -129,10 +146,18 @@ struct HistoryView: View {
         }
     }
     
-    // Card component for each purchase
+    /// A card component that displays summary information for a single purchase.
+    ///
+    /// This card shows purchase details like list name, total spent, date, store name,
+    /// and item count. It also serves as a navigation link to the full purchase details.
     struct PurchaseCard: View {
+        /// The purchase to display
         let purchase: Purchase
+        
+        /// Date formatter for displaying the purchase date
         let dateFormatter: DateFormatter
+        
+        /// Currency formatter for displaying the total spent
         let currencyFormatter: NumberFormatter
         
         var body: some View {
@@ -207,9 +232,15 @@ struct HistoryView: View {
         }
     }
     
-    // Detail view for a purchase
+    /// A detail view that displays comprehensive information about a purchase.
+    ///
+    /// This view shows both the purchase metadata (date, store, total) and
+    /// a list of all items that were part of the purchase.
     struct PurchaseDetailView: View {
+        /// The purchase to display details for
         let purchase: Purchase
+        
+        /// View model for fetching and managing purchase item details
         @StateObject private var detailViewModel = PurchaseDetailViewModel()
         
         var body: some View {
@@ -287,6 +318,9 @@ struct HistoryView: View {
             }
         }
         
+        /// Formats a date into a readable string with both date and time.
+        /// - Parameter date: The date to format
+        /// - Returns: A formatted date string (e.g., "Jan 1, 2023, 3:30 PM")
         private func formatDate(_ date: Date) -> String {
             let formatter = DateFormatter()
             formatter.dateStyle = .medium
@@ -294,6 +328,9 @@ struct HistoryView: View {
             return formatter.string(from: date)
         }
         
+        /// Formats a number as currency.
+        /// - Parameter value: The monetary value to format
+        /// - Returns: A formatted currency string (e.g., "$10.99")
         private func formatCurrency(_ value: Double) -> String {
             let formatter = NumberFormatter()
             formatter.numberStyle = .currency
@@ -302,14 +339,22 @@ struct HistoryView: View {
         }
     }
     
-    // ViewModel for purchase details
+    /// View model for handling the details of a purchase, including fetching associated items.
     class PurchaseDetailViewModel: ObservableObject {
+        /// The list of items in this purchase
         @Published var items: [ShoppingItem] = []
+        
+        /// Flag indicating whether items are currently being loaded
         @Published var isLoading = false
+        
+        /// Error message if loading fails
         @Published var errorMessage: String?
         
+        /// Reference to Firestore database
         private let db = Firestore.firestore()
         
+        /// Fetches all items associated with a specific purchase.
+        /// - Parameter purchase: The purchase for which to fetch items
         func fetchItems(for purchase: Purchase) {
             guard let userId = Auth.auth().currentUser?.uid else {
                 self.errorMessage = "No user logged in"
@@ -348,11 +393,14 @@ struct HistoryView: View {
                 }
         }
     }
-    
 }
 
-// Helper extension for ShoppingList
+// MARK: - Model Extensions
+
+/// Extension to convert ShoppingList to dictionary format for Firestore storage.
 extension ShoppingList {
+    /// Converts the shopping list to a dictionary for Firestore storage.
+    /// - Returns: A dictionary representation of the shopping list
     func toDictionary() -> [String: Any] {
         return [
             "id": id,
@@ -365,8 +413,11 @@ extension ShoppingList {
     }
 }
 
-// Helper extension for ShoppingItem
+/// Extension to convert ShoppingItem to dictionary format for Firestore storage.
 extension ShoppingItem {
+    /// Converts the shopping item to a dictionary for Firestore storage.
+    /// This method handles optional properties by only including them if they have values.
+    /// - Returns: A dictionary representation of the shopping item
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
             "id": id,
@@ -376,6 +427,7 @@ extension ShoppingItem {
             "useSimpleCount": useSimpleCount
         ]
         
+        // Add optional properties only if they exist
         if let price = price { dict["price"] = price }
         if let originalPrice = originalPrice { dict["originalPrice"] = originalPrice }
         if let targetQuantity = targetQuantity { dict["targetQuantity"] = targetQuantity }

@@ -1,16 +1,33 @@
 import SwiftUI
 import FirebaseFirestore
 
+/// A view for creating a new shopping list.
+///
+/// This view provides an interface for users to enter a list name,
+/// select a color, and optionally set a due date for a new shopping list.
 struct CreateNewListView: View {
+    /// Authentication manager for user context and Firestore operations
     @EnvironmentObject var authManager: AuthManager
+    
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
 
+    /// Environment dismiss action for dismissing the view
     @Environment(\.dismiss) var dismiss
+    
+    /// Name of the shopping list being created
     @State private var listName: String = ""
+    
+    /// Selected color for the shopping list
     @State private var selectedColor = Color.green
+    
+    /// Optional due date for the shopping list
     @State private var dueDate: Date?
+    
+    /// Flag indicating whether the date picker is shown
     @State private var showDatePicker = false
     
+    /// Available color options for the shopping list
     private let colorOptions = [
         (color: Color.green, name: "Green"),
         (color: Color.blue, name: "Blue"),
@@ -22,7 +39,7 @@ struct CreateNewListView: View {
         
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Custom navigation header
             ZStack {
                 Color(hex: "4CAF50")
                     .ignoresSafeArea()
@@ -47,10 +64,10 @@ struct CreateNewListView: View {
                 }
             }
             
-            // Content
+            // Form content
             ScrollView {
                 VStack(spacing: 24) {
-                    // List Name Input
+                    // List name input field
                     VStack(alignment: .leading, spacing: 8) {
                         Text("List Name")
                             .font(.subheadline)
@@ -64,7 +81,7 @@ struct CreateNewListView: View {
                     }
                     .padding(.horizontal, 16)
                     
-                    // Color Selection
+                    // Color selection grid
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Select Color")
                             .font(.subheadline)
@@ -99,7 +116,7 @@ struct CreateNewListView: View {
                     }
                     .padding(.horizontal, 16)
                     
-                    // Due Date Selection
+                    // Due date selection
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Due Date (Optional)")
                             .font(.subheadline)
@@ -128,7 +145,7 @@ struct CreateNewListView: View {
                 .padding(.vertical, 16)
             }
             
-            // Create Button
+            // Create button
             Button(action: handleCreateList) {
                 Text("Create List")
                     .font(.headline)
@@ -153,12 +170,19 @@ struct CreateNewListView: View {
         }
     }
     
+    /// Formats a date into a user-friendly string.
+    /// - Parameter date: The date to format
+    /// - Returns: A formatted date string (e.g., "Jan 1, 2023")
     private func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         return formatter.string(from: date)
     }
     
+    /// Creates a new shopping list and saves it to Firestore.
+    ///
+    /// This method validates the list name, creates a ShoppingList object with
+    /// the user-selected properties, and saves it using the AuthManager.
     private func handleCreateList() {
         guard !listName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         
@@ -181,4 +205,3 @@ struct CreateNewListView: View {
         }
     }
 }
-

@@ -1,18 +1,32 @@
 import SwiftUI
 import FirebaseFirestore
 
+/// The main dashboard view of the application.
+///
+/// HomeView serves as the central hub displaying a summary of the user's shopping lists,
+/// quick action buttons, weather information, and suggestions based on shopping patterns.
 struct HomeView: View {
+    /// Authentication manager for user context and data access
     @EnvironmentObject var authManager: AuthManager
+    
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
+    
+    /// Weather manager for fetching and displaying weather information
     @StateObject private var weatherManager = WeatherManager()
     
+    /// Collection of user's shopping lists
     @State private var lists: [ShoppingList] = []
+    
+    /// Total count of active shopping lists
     @State private var activeListCount = 0
+    
+    /// Flag indicating whether data is currently loading
     @State private var isLoading = true
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header section with title and user actions
             VStack(spacing: 0) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -52,7 +66,7 @@ struct HomeView: View {
             .frame(height: 120)
             .background(Color(hex: "4CAF50"))
             
-            // Main Content
+            // Main content area with scrollable sections
             ScrollView {
                 if isLoading {
                     ProgressView()
@@ -61,52 +75,48 @@ struct HomeView: View {
                         .padding(.top, 40)
                 } else {
                     VStack(spacing: 0) {
-                        // Quick Actions
+                        // Quick action buttons section
                         quickActionsSection()
                         
-                        // Your Shopping Lists
+                        // User's shopping lists section
                         shoppingListsSection()
                             .padding(.top, 16)
                         
+                        // Suggested items section
                         suggestionsSection()
                             .padding(.top, 16)
                         
+                        // Weather forecast section
                         VStack(alignment: .leading, spacing: 20) {
-                                     // Header
-                                     Text("Weather Forecast")
-                                       .font(.system(size: 18, weight: .semibold))
-                                       .foregroundColor(Color(hex: "424242"))
-                                                                          
-                                     if weatherManager.isLoading {
-                                         HStack {
-                                             Spacer()
-                                             ProgressView()
-                                                 .progressViewStyle(CircularProgressViewStyle())
-                                                 .scaleEffect(1.5)
-                                                 .padding()
-                                             Spacer()
-                                         }
-                                     } else {
-                                         // Daily forecast cards - horizontal scroll
-                                         ScrollView(.horizontal, showsIndicators: false) {
-                                             HStack(spacing: 16) {
-                                                 ForEach(weatherManager.forecasts) { forecast in
-                                                     DayForecastCard(forecast: forecast)
-                                                 }
-                                             }
-                                             .padding(.horizontal, 16)
-                                             .padding(.bottom, 8)
-                                         }
-                                     }
-                                     
-                                     Spacer()
-                                 }
-                                 .padding()
-                        
-            
-                        // Suggestions
-//                        weatherForecastSection()
-//                            .padding(.bottom, 16)
+                            Text("Weather Forecast")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(Color(hex: "424242"))
+                                                                   
+                            if weatherManager.isLoading {
+                                HStack {
+                                    Spacer()
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle())
+                                        .scaleEffect(1.5)
+                                        .padding()
+                                    Spacer()
+                                }
+                            } else {
+                                // Daily forecast cards - horizontal scroll
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 16) {
+                                        ForEach(weatherManager.forecasts) { forecast in
+                                            DayForecastCard(forecast: forecast)
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 8)
+                                }
+                            }
+                                 
+                            Spacer()
+                        }
+                        .padding()
                     }
                 }
             }
@@ -122,27 +132,32 @@ struct HomeView: View {
         }
     }
     
+    /// Determines the appropriate SF Symbol name for a weather condition.
+    /// - Parameter condition: The weather condition description
+    /// - Returns: An SF Symbol name representing the weather condition
     private func getWeatherIcon(for condition: String) -> String {
-          let condition = condition.lowercased()
+        let condition = condition.lowercased()
           
-          if condition.contains("clear") || condition.contains("sunny") {
-              return "sun.max.fill"
-          } else if condition.contains("cloud") {
-              return "cloud.fill"
-          } else if condition.contains("rain") || condition.contains("shower") {
-              return "cloud.rain.fill"
-          } else if condition.contains("snow") || condition.contains("sleet") {
-              return "cloud.snow.fill"
-          } else if condition.contains("thunder") || condition.contains("lightning") {
-              return "cloud.bolt.fill"
-          } else if condition.contains("fog") || condition.contains("mist") {
-              return "cloud.fog.fill"
-          } else {
-              return "questionmark.circle.fill"
-          }
-      }
+        if condition.contains("clear") || condition.contains("sunny") {
+            return "sun.max.fill"
+        } else if condition.contains("cloud") {
+            return "cloud.fill"
+        } else if condition.contains("rain") || condition.contains("shower") {
+            return "cloud.rain.fill"
+        } else if condition.contains("snow") || condition.contains("sleet") {
+            return "cloud.snow.fill"
+        } else if condition.contains("thunder") || condition.contains("lightning") {
+            return "cloud.bolt.fill"
+        } else if condition.contains("fog") || condition.contains("mist") {
+            return "cloud.fog.fill"
+        } else {
+            return "questionmark.circle.fill"
+        }
+    }
     
+    /// A card component that displays a single day's weather forecast.
     struct DayForecastCard: View {
+        /// The forecast data to display
         let forecast: DayForecast
         
         var body: some View {
@@ -203,8 +218,10 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - View Components
     
-    // View Components
+    /// Creates the quick actions section with buttons for common tasks.
+    /// - Returns: A view containing quick action buttons
     private func quickActionsSection() -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Quick Actions")
@@ -271,6 +288,8 @@ struct HomeView: View {
         .padding(.bottom, 24)
     }
     
+    /// Creates the shopping lists section displaying user's lists.
+    /// - Returns: A view containing a summary of user's shopping lists
     private func shoppingListsSection() -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Your Shopping Lists")
@@ -299,7 +318,8 @@ struct HomeView: View {
         .padding(.bottom, 16)
     }
     
-    
+    /// Creates the suggestions section with personalized recommendations.
+    /// - Returns: A view containing suggested items based on user patterns
     private func suggestionsSection() -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Suggested For You")
@@ -331,7 +351,7 @@ struct HomeView: View {
                 }
             }
             .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading) // Take full width
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.white)
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
@@ -340,6 +360,9 @@ struct HomeView: View {
         .padding(.bottom, 16)
     }
     
+    /// Formats a date for forecast display.
+    /// - Parameter date: The date to format
+    /// - Returns: A formatted string representing the date (e.g., "Today", "Tomorrow", "Mon")
     private func formattedForecastDate(_ date: Date) -> String {
         if Calendar.current.isDateInToday(date) {
             return "Today"
@@ -352,6 +375,9 @@ struct HomeView: View {
         return formatter.string(from: date) // "Mon", "Tue"
     }
 
+    /// Maps WeatherKit symbols to SF Symbols.
+    /// - Parameter condition: The weather condition symbol from WeatherKit
+    /// - Returns: The corresponding SF Symbol name
     private func systemSymbol(for condition: String) -> String {
         // Map WeatherKit symbols to SF Symbols (rough match)
         switch condition {
@@ -364,8 +390,16 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Helper Views
     
-    // Helper Views   
+    /// Creates a quick action button with icon and label.
+    /// - Parameters:
+    ///   - icon: SF Symbol name for the button icon
+    ///   - color: Color for the icon
+    ///   - bgColor: Background color for the icon circle
+    ///   - label: Text label for the button
+    ///   - action: Closure to execute when button is tapped
+    /// - Returns: A button view with the specified appearance
     private func quickActionButton(icon: String, color: Color, bgColor: Color, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
@@ -386,6 +420,9 @@ struct HomeView: View {
         }
     }
     
+    /// Creates a shopping list item card.
+    /// - Parameter list: The shopping list to display
+    /// - Returns: A button view that displays the list and navigates to its detail view when tapped
     private func shoppingListItem(_ list: ShoppingList) -> some View {
         Button(action: {
             navPath.append(Route.listDetail(id: list.id))
@@ -424,7 +461,7 @@ struct HomeView: View {
                             .frame(height: 8)
                             .cornerRadius(4)
                         
-                        let progress = CGFloat(list.completedItems) / CGFloat(list.totalItems)
+                        let progress = CGFloat(list.completedItems) / CGFloat(max(list.totalItems, 1))
                         Rectangle()
                             .fill(Color(hex: list.color))
                             .frame(width: progress * (UIScreen.main.bounds.width - 64), height: 8)
@@ -437,9 +474,9 @@ struct HomeView: View {
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 1)
         }
-//        .padding(.bottom, 16)
     }
     
+    /// Fetches the user's shopping lists from Firestore.
     private func fetchLists() async {
         isLoading = true
         do {
@@ -452,6 +489,9 @@ struct HomeView: View {
         isLoading = false
     }
     
+    /// Formats a date for display in list cards.
+    /// - Parameter date: The date to format
+    /// - Returns: A formatted string representing the date (e.g., "Today", "Apr 20")
     private func formattedDate(_ date: Date) -> String {
         if Calendar.current.isDateInToday(date) {
             return "Today"
@@ -461,5 +501,4 @@ struct HomeView: View {
         formatter.dateFormat = "MMM d" // Example: "Apr 20"
         return formatter.string(from: date)
     }
-
 }

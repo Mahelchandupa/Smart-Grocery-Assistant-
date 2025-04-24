@@ -1,14 +1,26 @@
 import SwiftUI
 
+/// A view that displays all of the user's shopping lists.
+///
+/// This view presents a scrollable list of the user's shopping lists, with options to navigate
+/// to list details and create new lists. It handles various states including loading, empty state,
+/// and displaying the lists.
 struct ListsView: View {
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
+    
+    /// Authentication manager for user context and data access
     @EnvironmentObject var authManager: AuthManager
+    
+    /// Collection of user's shopping lists
     @State private var lists: [ShoppingList] = []
+    
+    /// Flag indicating whether data is currently loading
     @State private var loading = true
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header with navigation and title
             ZStack {
                 Color(Color(hex: "4CAF50"))
                     .ignoresSafeArea(edges: .top)
@@ -56,6 +68,7 @@ struct ListsView: View {
     
     // MARK: - Main Components
     
+    /// Main content container that displays either loading view or lists content
     private var mainContent: some View {
         Group {
             if loading {
@@ -66,6 +79,7 @@ struct ListsView: View {
         }
     }
     
+    /// Loading indicator shown while fetching data
     private var loadingView: some View {
         VStack {
             Spacer()
@@ -76,6 +90,7 @@ struct ListsView: View {
         }
     }
     
+    /// Main content view displaying shopping lists
     private var listsContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -97,6 +112,7 @@ struct ListsView: View {
         .background(Color(hex: "F9FAFB"))
     }
     
+    /// Lists display when user has shopping lists
     private var listsView: some View {
         ForEach(lists) { list in
             ShoppingListCard(list: list, navPath: $navPath)
@@ -104,6 +120,7 @@ struct ListsView: View {
         }
     }
     
+    /// Empty state display when user has no shopping lists
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "list.bullet.clipboard")
@@ -126,6 +143,7 @@ struct ListsView: View {
         .padding(.vertical, 60)
     }
     
+    /// Button for creating a new shopping list
     private var createNewListButton: some View {
         Button(action: {
             navPath.append(Route.createNewList)
@@ -144,6 +162,7 @@ struct ListsView: View {
     
     // MARK: - Data Fetching
     
+    /// Fetches the user's shopping lists from Firestore
     private func fetchLists() {
         Task {
             do {
@@ -161,98 +180,5 @@ struct ListsView: View {
                 }
             }
         }
-    }
-}
-
-struct ShoppingListCard: View {
-    let list: ShoppingList
-    @Binding var navPath: NavigationPath
-    
-    var body: some View {
-        Button(action: {
-            navPath.append(Route.listDetail(id: list.id))
-        }) {
-            VStack(alignment: .leading, spacing: 0) {
-                colorBar
-                contentSection
-            }
-            .background(Color.white)
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .padding(.bottom, 8)
-    }
-    
-    // MARK: - Component Views
-    
-    private var colorBar: some View {
-        Rectangle()
-            .fill(Color(hex: list.color))
-            .frame(height: 8)
-    }
-    
-    private var contentSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(list.name)
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(Color(hex: "1F2937"))
-            
-            listStats
-            progressBar
-        }
-        .padding(16)
-    }
-    
-    private var listStats: some View {
-        HStack {
-            Text("\(list.completedItems)/\(list.totalItems) items")
-                .font(.subheadline)
-                .foregroundColor(Color(hex: "6B7280"))
-            
-            Spacer()
-            
-            dueDateBadge
-        }
-    }
-    
-    private var dueDateBadge: some View {
-        Text("Due: \(list.dueDate != nil ? formattedDate(list.dueDate!) : "No due date")")
-            .font(.caption)
-            .fontWeight(.medium)
-            .foregroundColor(Color(hex: "6B7280"))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 4)
-            .background(Color(hex: "F3F4F6"))
-            .cornerRadius(16)
-    }
-    
-    private var progressBar: some View {
-        ZStack(alignment: .leading) {
-            Rectangle()
-                .fill(Color(hex: "E5E7EB"))
-                .frame(height: 8)
-                .cornerRadius(4)
-            
-            if list.totalItems > 0 {
-                let progressWidth = (CGFloat(list.completedItems) / CGFloat(list.totalItems)) * (UIScreen.main.bounds.width - 64)
-                
-                Rectangle()
-                    .fill(Color(list.color))
-                    .frame(width: progressWidth, height: 8)
-                    .cornerRadius(4)
-            }
-        }
-    }
-    
-    private func formattedDate(_ date: Date) -> String {
-        if Calendar.current.isDateInToday(date) {
-            return "Today"
-        }
-
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d" // Example: "Apr 20"
-        return formatter.string(from: date)
     }
 }
