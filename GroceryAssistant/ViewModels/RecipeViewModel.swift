@@ -1,24 +1,34 @@
-//
-//  RecipeViewModel.swift
-//  GroceryAssistant
-//
-//  Created by sasiri rukshan nanayakkara on 4/20/25.
-//
-
 import SwiftUI
 
+/// A view model that manages recipe suggestions based on available ingredients.
+///
+/// This class handles fetching user ingredients, retrieving recipe suggestions from an API,
+/// calculating ingredient match percentages, and applying filters to recipe results.
 class RecipeViewModel: ObservableObject {
+    /// List of available ingredients from the user's shopping lists
     @Published var ingredients: [Ingredient] = []
+    
+    /// List of suggested recipes based on available ingredients
     @Published var suggestedRecipes: [Recipe] = []
+    
+    /// Flag indicating whether data is currently being loaded
     @Published var isLoading: Bool = false
+    
+    /// Currently active filter category for recipes
     @Published var activeFilter: String = "All Recipes"
     
+    /// Available filtering options for recipes
     let filterOptions = ["All Recipes", "Quick Meals", "Vegetarian", "Breakfast", "Lunch", "Dinner"]
     
+    /// Initializes the view model and starts fetching user ingredients
     init() {
         fetchUserIngredients()
     }
     
+    /// Fetches ingredients from the user's shopping lists.
+    ///
+    /// In this implementation, mock data is used to simulate fetching from a database.
+    /// In a production environment, this would retrieve actual data from Firestore.
     func fetchUserIngredients() {
         // Simulate fetching ingredients from a database
         isLoading = true
@@ -43,6 +53,10 @@ class RecipeViewModel: ObservableObject {
         }
     }
     
+    /// Fetches recipe suggestions based on selected ingredients.
+    ///
+    /// This method uses TheMealDB API to find recipes that match the user's
+    /// available ingredients. It filters out recipes with no matching ingredients.
     func fetchRecipeSuggestions() {
         isLoading = true
         
@@ -97,6 +111,11 @@ class RecipeViewModel: ObservableObject {
         }
     }
     
+    /// Processes the list of meals from the API and fetches detailed information for each.
+    ///
+    /// - Parameters:
+    ///   - meals: Array of meal data from the initial API response
+    ///   - selectedIngredients: List of ingredients the user has selected
     private func processRecipes(meals: [[String: Any]], selectedIngredients: [String]) {
         // Take only the first 5 recipes to keep it simple
         let limitedMeals = Array(meals.prefix(5))
@@ -130,6 +149,12 @@ class RecipeViewModel: ObservableObject {
         }
     }
     
+    /// Fetches detailed information for a specific recipe.
+    ///
+    /// - Parameters:
+    ///   - id: The recipe ID to fetch details for
+    ///   - selectedIngredients: List of ingredients the user has selected
+    ///   - completion: Closure called with the created Recipe object or nil if unsuccessful
     private func fetchRecipeDetails(id: String, selectedIngredients: [String], completion: @escaping (Recipe?) -> Void) {
         let urlString = "https://www.themealdb.com/api/json/v1/1/lookup.php?i=\(id)"
         
@@ -205,6 +230,9 @@ class RecipeViewModel: ObservableObject {
         }.resume()
     }
     
+    /// Toggles the selection state of an ingredient and refreshes recipe suggestions.
+    ///
+    /// - Parameter ingredient: The ingredient to toggle selection for
     func toggleIngredientSelection(ingredient: Ingredient) {
         if let index = ingredients.firstIndex(where: { $0.id == ingredient.id }) {
             ingredients[index].isSelected.toggle()
@@ -212,12 +240,13 @@ class RecipeViewModel: ObservableObject {
         }
     }
     
+    /// Applies a filter to the suggested recipes based on category.
+    ///
+    /// - Parameter filter: The filter category to apply
     func applyFilter(filter: String) {
         activeFilter = filter
         
-        // This is simplified filtering - in a real app, you might want to re-fetch with new filters
         if activeFilter == "All Recipes" {
-            // No filtering needed
             return
         }
         

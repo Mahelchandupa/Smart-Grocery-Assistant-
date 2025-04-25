@@ -1,31 +1,17 @@
 import SwiftUI
 
-// MARK: - Models
-struct Ingredient: Identifiable {
-    let id = UUID()
-    let name: String
-    let quantity: String
-    var isSelected: Bool = true
-}
-
-struct Recipe: Identifiable, Equatable {
-    let id: String
-    let name: String
-    let category: String
-    let area: String
-    let thumbnail: String
-    let instructions: String
-    let ingredients: [String]
-    let measures: [String]
-    let cookTime: String
-    let servings: Int
-    let matchPercentage: Int
-}
-
-// MARK: - Views
+/// A view that suggests recipes based on available ingredients.
+///
+/// This view displays a list of available ingredients from the user's shopping lists,
+/// allows filtering by recipe type, and shows recipe suggestions with match percentages.
 struct RecipeSuggestionsView: View {
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
+    
+    /// Authentication manager for user context
     @EnvironmentObject var authManager: AuthManager
+    
+    /// View model that handles recipe suggestion logic and API calls
     @StateObject private var viewModel = RecipeViewModel()
     
     var body: some View {
@@ -63,6 +49,7 @@ struct RecipeSuggestionsView: View {
     
     // MARK: - Component Views
     
+    /// Header view with navigation and title
     var headerView: some View {
         ZStack {
             Color(hex: "4CAF50")
@@ -92,6 +79,7 @@ struct RecipeSuggestionsView: View {
         .frame(height: 60)
     }
     
+    /// Loading indicator view displayed while fetching data
     var loadingView: some View {
         VStack {
             Spacer()
@@ -104,6 +92,7 @@ struct RecipeSuggestionsView: View {
         }
     }
     
+    /// Section displaying available ingredients with selection functionality
     var ingredientsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -158,6 +147,7 @@ struct RecipeSuggestionsView: View {
         .padding(.top, 8)
     }
     
+    /// Section with filtering options for recipes
     var filterSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -219,6 +209,7 @@ struct RecipeSuggestionsView: View {
         .background(Color(.systemGray6))
     }
     
+    /// Section displaying recipe suggestions based on selected ingredients
     var recipeSuggestionsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Suggested Recipes")
@@ -242,8 +233,8 @@ struct RecipeSuggestionsView: View {
                 EmptyRecipesView()
             } else {
                 ForEach(viewModel.suggestedRecipes) { recipe in
-                                   RecipeCard(recipe: recipe)
-                                                   .buttonStyle(PlainButtonStyle())
+                    RecipeCard(recipe: recipe)
+                        .buttonStyle(PlainButtonStyle())
                 }
             }
         }
@@ -251,9 +242,18 @@ struct RecipeSuggestionsView: View {
     }
 }
 
+/// A button for selecting/deselecting an ingredient.
+///
+/// This component displays an ingredient with its name and quantity,
+/// and allows toggling its selection state for recipe filtering.
 struct IngredientButton: View {
+    /// The ingredient this button represents
     let ingredient: Ingredient
+    
+    /// Whether the ingredient is currently selected
     let isSelected: Bool
+    
+    /// Action to perform when the button is tapped
     let action: () -> Void
     
     var body: some View {
@@ -289,139 +289,10 @@ struct IngredientButton: View {
     }
 }
 
-struct RecipeCard: View {
-    let recipe: Recipe
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Recipe Image
-            AsyncImage(url: URL(string: recipe.thumbnail)) { phase in
-                switch phase {
-                case .empty:
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .aspectRatio(16/9, contentMode: .fill)
-                        .frame(height: 200)
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 200)
-                        .clipped()
-                case .failure:
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .aspectRatio(16/9, contentMode: .fill)
-                        .frame(height: 200)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.largeTitle)
-                                .foregroundColor(.gray)
-                        )
-                @unknown default:
-                    Rectangle()
-                        .fill(Color(.systemGray5))
-                        .aspectRatio(16/9, contentMode: .fill)
-                        .frame(height: 200)
-                }
-            }
-            
-            // Recipe Info
-            VStack(alignment: .leading, spacing: 12) {
-                // Title and Match Percentage
-                HStack {
-                    Text(recipe.name)
-                        .font(.headline)
-                        .lineLimit(2)
-                    
-                    Spacer()
-                    
-                    Text("\(recipe.matchPercentage)% Match")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            recipe.matchPercentage > 80 ? Color.green.opacity(0.2) :
-                                recipe.matchPercentage > 50 ? Color.yellow.opacity(0.2) :
-                                Color.red.opacity(0.2)
-                        )
-                        .foregroundColor(
-                            recipe.matchPercentage > 80 ? Color.green :
-                                recipe.matchPercentage > 50 ? Color.yellow :
-                                Color.red
-                        )
-                        .cornerRadius(10)
-                }
-                
-                // Category Tags
-                HStack {
-                    Text(recipe.category)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-                    
-                    Text(recipe.area)
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-                }
-                
-                // Description
-                Text(recipe.instructions.prefix(100) + "...")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .lineLimit(2)
-                
-                // Cook Time and Servings
-                HStack {
-                    HStack {
-                        Image(systemName: "clock")
-                            .font(.caption)
-                        Text(recipe.cookTime)
-                            .font(.caption)
-                    }
-                    .foregroundColor(.gray)
-                    
-                    Spacer()
-                    
-                    HStack {
-                        Image(systemName: "person.2")
-                            .font(.caption)
-                        Text("\(recipe.servings) servings")
-                            .font(.caption)
-                    }
-                    .foregroundColor(.gray)
-                }
-                
-                // View Recipe Button
-                Button(action: {
-                    // Navigation happens through NavigationLink
-                }) {
-                    Text("View Recipe")
-                        .fontWeight(.medium)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.green)
-                        .cornerRadius(8)
-                }
-                .padding(.top, 8)
-            }
-            .padding(16)
-        }
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-    }
-}
-
+/// A view displayed when no recipes match the current filter criteria.
+///
+/// This component shows a friendly message when no recipes are found,
+/// and suggests actions the user can take to find recipes.
 struct EmptyRecipesView: View {
     var body: some View {
         VStack {
@@ -449,11 +320,10 @@ struct EmptyRecipesView: View {
     }
 }
 
-// Entry point for previews
+/// Preview provider for RecipeSuggestionsView
 struct RecipeSuggestionsView_Previews: PreviewProvider {
     static var previews: some View {
         RecipeSuggestionsView(navPath: .constant(NavigationPath()))
             .environmentObject(AuthManager())
     }
 }
-

@@ -6,22 +6,11 @@ import SwiftUI
 /// Model representing nutritional information for a food product.
 /// This can represent both top-level nutrients and nested sub-nutrients.
 struct NutrientInfo: Identifiable {
-    /// Unique identifier for the nutrient
     var id = UUID()
-    
-    /// Name of the nutrient (e.g., "Total Fat", "Protein")
     var name: String
-    
-    /// Numerical value of the nutrient
     var value: Double
-    
-    /// Unit of measurement (e.g., "g", "mg")
     var unit: String
-    
-    /// Percentage of daily recommended value, if applicable
     var dailyValue: Int?
-    
-    /// Optional array of sub-nutrients (e.g., saturated fat under total fat)
     var subNutrients: [NutrientInfo]?
     
     /// Determines the appropriate color to display based on daily value percentage.

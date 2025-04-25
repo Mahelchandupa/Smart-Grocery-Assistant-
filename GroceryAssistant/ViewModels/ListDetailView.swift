@@ -1,20 +1,39 @@
 import SwiftUI
 import FirebaseAuth
 
+/// A view that displays the detailed contents of a shopping list.
+///
+/// This view shows all items in a shopping list grouped by category,
+/// allows checking items off, searching for specific items, and adding
+/// new items to the list.
 struct ListDetailView: View {
+    /// The unique identifier of the shopping list to display
     let listId: String
+    
+    /// Navigation path for handling navigation within the app
     @Binding var navPath: NavigationPath
+    
+    /// Authentication manager for user context
     @EnvironmentObject var authManager: AuthManager
     
+    /// Text entered in the search field for filtering items
     @State private var searchQuery = ""
+    
+    /// Flag controlling whether the add item modal is displayed
     @State private var showAddItemModal = false
+    
+    /// Flag indicating whether data is currently loading
     @State private var loading = true
+    
+    /// Categories with their associated items from the shopping list
     @State private var categories: [CategoryWithItems] = []
+    
+    /// Name of the shopping list
     @State private var listName = "Shopping List"
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header with list name and item count
             ZStack {
                 Color(hex: "4CAF50")
                     .ignoresSafeArea(edges: .top)
@@ -40,7 +59,7 @@ struct ListDetailView: View {
                             
                             Text("\(checkedItemsCount) of \(totalItemsCount) items")
                                 .font(.subheadline)
-                                .foregroundColor(Color(hex: "DCFCE7")) // Light green
+                                .foregroundColor(Color(hex: "DCFCE7"))
                         }
                         
                         Spacer()
@@ -52,7 +71,7 @@ struct ListDetailView: View {
             }
             .frame(height: 60)
             
-            // Search Bar
+            // Search bar and add button
             HStack(spacing: 8) {
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -84,7 +103,9 @@ struct ListDetailView: View {
             .background(Color.white)
             .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
             
+            // Content area with conditional states
             if loading && categories.isEmpty {
+                // Loading state
                 VStack {
                     Spacer()
                     ProgressView()
@@ -98,14 +119,15 @@ struct ListDetailView: View {
                     Spacer()
                 }
             } else if filteredCategories.isEmpty {
+                // Empty state
                 emptyListView
             } else {
-                // Shopping List Items
+                // Shopping list items grouped by category
                 ScrollView {
                     VStack(spacing: 16) {
                         ForEach(filteredCategories) { category in
                             VStack(spacing: 0) {
-                                // Category Header
+                                // Category header
                                 HStack {
                                     Text(category.name)
                                         .font(.subheadline)
@@ -122,7 +144,7 @@ struct ListDetailView: View {
                                 .padding(.vertical, 8)
                                 .background(Color(hex: "F3F4F6"))
                                 
-                                // Category Items
+                                // Category items
                                 ForEach(category.items) { item in
                                     ItemRow(
                                         item: item, 
@@ -144,7 +166,7 @@ struct ListDetailView: View {
                 .background(Color(hex: "F9FAFB"))
             }
             
-            // Bottom Action Bar
+            // Bottom action bar with start shopping button
             VStack {
                 Button(action: {
                     navPath.append(Route.shopping(id: listId))
@@ -180,6 +202,7 @@ struct ListDetailView: View {
         }
     }
     
+    /// View displayed when the list is empty or no search results are found
     private var emptyListView: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -218,15 +241,19 @@ struct ListDetailView: View {
         .background(Color(hex: "F9FAFB"))
     }
     
-    // Computed properties
+    // MARK: - Computed Properties
+    
+    /// Total number of items in the shopping list
     private var totalItemsCount: Int {
         categories.reduce(0) { $0 + $1.items.count }
     }
     
+    /// Number of checked (completed) items in the list
     private var checkedItemsCount: Int {
         categories.reduce(0) { $0 + $1.items.filter(\.checked).count }
     }
     
+    /// Filtered categories based on the search query
     private var filteredCategories: [CategoryWithItems] {
         if searchQuery.isEmpty {
             return categories
@@ -249,11 +276,16 @@ struct ListDetailView: View {
         }
     }
     
+    /// Calculates the number of completed items within a category
+    /// - Parameter category: The category to count completed items for
+    /// - Returns: The number of checked items in the category
     private func completedItemsCount(in category: CategoryWithItems) -> Int {
         category.items.filter(\.checked).count
     }
     
-    // Functions
+    // MARK: - Data Operations
+    
+    /// Fetches list data including items and categories from Firestore
     private func fetchListData() {
         Task {
             do {
@@ -300,6 +332,11 @@ struct ListDetailView: View {
         }
     }
     
+    /// Handles toggling the checked state of an item
+    /// - Parameters:
+    ///   - categoryId: ID of the category containing the item
+    ///   - itemId: ID of the item to toggle
+    ///   - isChecked: Current checked state of the item
     private func handleToggleItem(categoryId: String, itemId: String, isChecked: Bool) {
         Task {
             do {
@@ -318,6 +355,11 @@ struct ListDetailView: View {
         }
     }
     
+    /// Updates the local checked state of an item
+    /// - Parameters:
+    ///   - categoryId: ID of the category containing the item
+    ///   - itemId: ID of the item to update
+    ///   - isChecked: New checked state for the item
     private func updateItemCheckedState(categoryId: String, itemId: String, isChecked: Bool) {
         categories = categories.map { category in
             if category.id == categoryId {
@@ -337,10 +379,18 @@ struct ListDetailView: View {
     }
 }
 
-// Item Row Component
+/// A row component that displays a shopping item with a checkbox and details.
+///
+/// This component shows an item's name, quantity information, and checked state,
+/// and allows toggling the checked state by tapping the checkbox.
 struct ItemRow: View {
+    /// The shopping item to display
     let item: ShoppingItem
+    
+    /// ID of the category containing this item
     let categoryId: String
+    
+    /// Callback function called when the item is toggled
     let onToggle: (String, String, Bool) -> Void
     
     var body: some View {
@@ -371,7 +421,7 @@ struct ItemRow: View {
                     .foregroundColor(item.checked ? Color(hex: "9CA3AF") : Color(hex: "1F2937"))
                     .strikethrough(item.checked)
                 
-                // Quantity information
+                // Quantity information - simple count
                 if item.useSimpleCount != false {
                     HStack {
                         if let current = item.currentQuantity {
@@ -395,6 +445,7 @@ struct ItemRow: View {
                         }
                     }
                 } else {
+                    // Quantity information - custom unit
                     HStack {
                         if let current = item.currentUnit, !current.isEmpty {
                             Text("Have: \(current)")

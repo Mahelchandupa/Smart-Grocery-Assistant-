@@ -1,28 +1,62 @@
-//
-//  SignUpView.swift
-//  GroceryAssistant
-
 import SwiftUI
 import LocalAuthentication
 
+/// A view that handles new user registration by presenting a sign-up form.
+///
+/// This view allows users to create a new account by entering their personal information,
+/// setting a password, and optionally enabling biometric authentication. It includes
+/// form validation and error handling for all input fields.
 struct SignUpView: View {
+    /// Navigation path for handling navigation between views
     @Binding var navPath: NavigationPath
+    
+    /// Authentication manager for handling sign-up operations
     @EnvironmentObject private var authManager: AuthManager
+    
+    // MARK: - Form Inputs
+    
+    /// User's first name input
     @State private var firstName: String = ""
+    
+    /// User's last name input
     @State private var lastName: String = ""
+    
+    /// User's email address input
     @State private var email: String = ""
+    
+    /// User's password input
     @State private var password: String = ""
+    
+    /// User's phone number input
     @State private var phoneNumber: String = ""
+    
+    /// Whether to enable biometric authentication for the new account
     @State private var enableBiometrics: Bool = false
+    
+    /// Whether to show the password in plain text
     @State private var showPassword: Bool = false
+    
+    /// Flag indicating whether a sign-up operation is in progress
     @State private var isLoading: Bool = false
     
+    // MARK: - Validation Errors
+    
+    /// Error message for first name validation
     @State private var firstNameError: String? = nil
+    
+    /// Error message for last name validation
     @State private var lastNameError: String? = nil
+    
+    /// Error message for email validation
     @State private var emailError: String? = nil
+    
+    /// Error message for password validation
     @State private var passwordError: String? = nil
+    
+    /// Error message for phone number validation
     @State private var phoneNumberError: String? = nil
     
+    /// Type of biometric authentication available on the device
     @State private var biometricType: BiometricType = .none
     
     var body: some View {
@@ -320,37 +354,58 @@ struct SignUpView: View {
         .navigationBarHidden(true)
     }
     
+    // MARK: - Biometric Authentication
+    
+    /// Determines the type of biometric authentication available on the device.
+    ///
+    /// This method checks whether Face ID or Touch ID is available and sets
+    /// the appropriate biometric type.
     private func checkBiometricType() {
-    let context = LAContext()
-    var error: NSError?
-    
-    if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-        switch context.biometryType {
-        case .faceID: biometricType = .faceID
-        case .touchID: biometricType = .touchID
-        default: biometricType = .none
+        let context = LAContext()
+        var error: NSError?
+        
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            switch context.biometryType {
+            case .faceID: biometricType = .faceID
+            case .touchID: biometricType = .touchID
+            default: biometricType = .none
+            }
+        } else {
+            biometricType = .none
         }
-    } else {
-        biometricType = .none
     }
-}
     
+    // MARK: - Validation Methods
+    
+    /// Validates if a string is a properly formatted email address.
+    /// - Parameter email: The email string to validate
+    /// - Returns: True if the email format is valid, false otherwise
     private func validateEmail(_ email: String) -> Bool {
         let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailRegex)
         return emailPredicate.evaluate(with: email)
     }
     
+    /// Validates if a password meets the minimum security requirements.
+    /// - Parameter password: The password string to validate
+    /// - Returns: True if the password is at least 8 characters long
     private func validatePassword(_ password: String) -> Bool {
         return password.count >= 8
     }
     
+    /// Validates if a string is a properly formatted phone number.
+    /// - Parameter phoneNumber: The phone number string to validate
+    /// - Returns: True if the phone number format is valid, false otherwise
     private func validatePhoneNumber(_ phoneNumber: String) -> Bool {
         let phoneRegex = "^\\+?[0-9]{10,14}$"
         let phonePredicate = NSPredicate(format: "SELF MATCHES %@", phoneRegex)
         return phonePredicate.evaluate(with: phoneNumber)
     }
     
+    /// Attempts to enroll the user in biometric authentication.
+    ///
+    /// This method prompts the user to authenticate with biometrics to confirm
+    /// their identity before enabling biometric login for the account.
     private func enrollBiometrics() {
         let context = LAContext()
         var error: NSError?
@@ -378,6 +433,13 @@ struct SignUpView: View {
         }
     }
     
+    // MARK: - Form Handling
+    
+    /// Validates form inputs and initiates the sign-up process.
+    ///
+    /// This method performs validation on all form fields, displays appropriate
+    /// error messages, and calls the authentication manager to create a new user
+    /// account if validation passes.
     private func handleSignUp() {
         // Reset errors
         firstNameError = nil
@@ -389,9 +451,9 @@ struct SignUpView: View {
         var isValid = true
         
         // If user wants biometrics, authenticate first to confirm their identity
-               if enableBiometrics {
-                   enrollBiometrics()
-               }
+        if enableBiometrics {
+            enrollBiometrics()
+        }
         
         // Validate first name
         if firstName.isEmpty {
@@ -453,7 +515,6 @@ struct SignUpView: View {
                     }
                 }
             }
-
         }
     }
 }

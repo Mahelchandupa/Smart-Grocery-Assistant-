@@ -6,10 +6,6 @@ import Foundation
 enum BiometricType {
     /// No biometric authentication available
     case none
-    
-    /// Touch ID authentication
     case touchID
-    
-    /// Face ID authentication
     case faceID
 }

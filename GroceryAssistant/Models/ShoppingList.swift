@@ -6,22 +6,11 @@ import FirebaseFirestore
 
 /// Model representing a shopping list with metadata.
 struct ShoppingList: Codable, Identifiable, Equatable {
-    /// Unique identifier for the shopping list
     var id: String
-    
-    /// Name of the shopping list
     var name: String
-    
-    /// Color associated with the list (as a string)
     var color: String
-    
-    /// Optional due date for the shopping list
     var dueDate: Date?
-    
-    /// Total number of items in the list
     var totalItems: Int = 0
-    
-    /// Number of completed (checked) items in the list
     var completedItems: Int = 0
 
     /// Equatable implementation to compare shopping lists by ID
@@ -35,13 +24,6 @@ struct ShoppingList: Codable, Identifiable, Equatable {
     }
 
     /// Initializes a new shopping list with the specified properties
-    /// - Parameters:
-    ///   - id: Unique identifier for the list
-    ///   - name: Name of the list
-    ///   - color: Color associated with the list
-    ///   - dueDate: Optional due date for the list
-    ///   - totalItems: Total number of items in the list
-    ///   - completedItems: Number of completed items in the list
     init(id: String, name: String, color: String, dueDate: Date? = nil, totalItems: Int = 0, completedItems: Int = 0) {
         self.id = id
         self.name = name
