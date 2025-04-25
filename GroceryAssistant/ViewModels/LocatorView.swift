@@ -78,8 +78,6 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         guard let location = locations.first else { return }
         userLocation = location.coordinate
         
-        // Use user location if they appear to be in Sri Lanka
-        // Otherwise use Sri Lanka center for demo/testing purposes
         let userInSriLanka = isLocationInSriLanka(location.coordinate)
         let locationToUse = userInSriLanka ? location.coordinate : sriLankaCenter
         
@@ -102,9 +100,8 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         fetchNearbyStores(near: CLLocation(latitude: sriLankaCenter.latitude, longitude: sriLankaCenter.longitude))
     }
     
-    // Check if coordinates are in Sri Lanka (rough bounding box)
+    // Check if coordinates are in Sri Lanka
     private func isLocationInSriLanka(_ coordinate: CLLocationCoordinate2D) -> Bool {
-        // More generous bounding box for Sri Lanka that includes surrounding waters
         return coordinate.latitude >= 5.5 && coordinate.latitude <= 10.0 &&
                coordinate.longitude >= 79.0 && coordinate.longitude <= 82.5
     }
@@ -131,7 +128,7 @@ class StoreViewModel: NSObject, ObservableObject, CLLocationManagerDelegate {
         // Set region for both searches
         let searchRegion = MKCoordinateRegion(
             center: mapCenterLocation ?? sriLankaCenter,
-            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1) // Smaller span to focus on nearby locations
+            span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1) 
         )
         supermarketRequest.region = searchRegion
         groceryRequest.region = searchRegion

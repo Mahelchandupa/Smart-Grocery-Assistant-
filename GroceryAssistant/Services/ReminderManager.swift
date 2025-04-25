@@ -322,7 +322,7 @@ class ReminderManager: ObservableObject {
         )
         
         // Set priority
-        ekReminder.priority = 1 // High priority
+        ekReminder.priority = 1
         
         do {
             // Save the reminder
